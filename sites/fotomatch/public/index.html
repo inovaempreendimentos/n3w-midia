@@ -205,7 +205,10 @@ fbq('init','39072077939073915');fbq('track','PageView');fbq('track','ViewContent
     <h2>Recebemos suas fotos!</h2>
     <p class="sub" id="pendenteTxt">Sua nota chega em até 10 min no contato que você deixou.</p>
     <p class="mini" id="pendenteCod"></p>
-    <button class="btn" id="tentarNota">Tentar de novo</button>
+    <form id="formPend" novalidate><label>Seu e-mail<input id="emailPend" type="email" inputmode="email" autocomplete="email" placeholder="voce@email.com"></label></form>
+    <button class="btn" id="pendOk" disabled>Me avise quando a nota sair</button>
+    <p class="mini centro" id="pendMsg"></p>
+    <button class="btn sec" id="tentarNota">Tentar de novo</button>
   </section>
 </main>
 

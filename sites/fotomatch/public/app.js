@@ -171,7 +171,7 @@ function liberaResultado() {
     try { if (window.fbq) fbq("track", "Lead", { content_name: "fotomatch_nota_gratis" }); } catch { /* */ }
     return mostraResultado(notaPronta, false);
   }
-  $("#pendenteTxt").textContent = "A análise demorou mais que o normal. Toque em tentar de novo em alguns minutos.";
+  $("#pendenteTxt").textContent = "Suas fotos chegaram, mas a análise está com fila agora. Deixe seu e-mail e mandamos a nota assim que sair, ou tente de novo em alguns minutos.";
   $("#pendenteCod").textContent = estado.notaErro ? "código: " + estado.notaErro : "";
   ir("pendente");
 }
@@ -190,7 +190,7 @@ $("#contatoOk").addEventListener("click", async () => {
   if (!c.ok) { $("#erroContato").textContent = c.erro || "Confira seus dados."; return; }
   try { if (window.fbq) fbq("track", "Lead", { content_name: "fotomatch_nota_gratis" }); } catch { /* */ }
   if (notaPronta) return mostraResultado(notaPronta, false);
-  $("#pendenteTxt").textContent = "A análise demorou mais que o normal. Toque em tentar de novo em alguns minutos.";
+  $("#pendenteTxt").textContent = "Suas fotos chegaram, mas a análise está com fila agora. Deixe seu e-mail e mandamos a nota assim que sair, ou tente de novo em alguns minutos.";
   $("#pendenteCod").textContent = estado.notaErro ? "código: " + estado.notaErro : "";
   ir("pendente");
 });
@@ -336,3 +336,14 @@ const EXEMPLO = {
 };
 
 marca("inicio");
+
+// Fila na análise: guarda o e-mail para mandar a nota depois (sem e-mail não há como avisar).
+$("#emailPend").addEventListener("input", () => { $("#pendOk").disabled = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test($("#emailPend").value.trim()); });
+$("#pendOk").addEventListener("click", async () => {
+  if (!estado.lead) return;
+  $("#pendOk").disabled = true;
+  const c = await api("contato", { ...estado.lead, email: $("#emailPend").value, consentimento: true });
+  if (!c.ok) { $("#pendMsg").textContent = c.erro || "Confira o e-mail."; $("#pendOk").disabled = false; return; }
+  marca("pendente_email");
+  $("#pendMsg").textContent = "Pronto! Assim que a nota sair, ela chega no seu e-mail.";
+});
