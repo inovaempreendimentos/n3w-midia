@@ -6,8 +6,8 @@
 const SB = Deno.env.get("SUPABASE_URL")!;
 const SK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const OPENAI = Deno.env.get("OPENAI_API_KEY") || "";
-const MODELO = Deno.env.get("MATCH_COPILOTO_MODELO") || "gpt-4.1-mini";
-const PRODUTOS = (Deno.env.get("MATCH_COPILOTO_PRODUTOS") || "").split(",").map((s) => s.trim()).filter(Boolean);
+const MODELO = Deno.env.get("MATCH_COPILOTO_MODELO") || "gpt-4.1";
+const PRODUTOS = (Deno.env.get("MATCH_COPILOTO_PRODUTOS") || "").split(",").map((s) => s.trim()).filter(Boolean).concat(["L9EAAO"]);
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type, authorization, apikey, x-client-info", "Access-Control-Allow-Methods": "POST, OPTIONS" };
 const out = (c: number, o: unknown) => new Response(JSON.stringify(o), { status: c, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } });
 async function db(path: string, init: { method?: string; body?: unknown; prefer?: string } = {}) {
@@ -46,6 +46,10 @@ Regras:
 - Se houver qualquer sinal de que alguém na conversa é menor de idade, ou se os prints não forem de uma conversa/perfil, responda com "fora_do_escopo": true.
 - As respostas devem soar como ele escreveria (mesmo tom e tamanho das mensagens dele), prontas para copiar.
 - Seja específico com o que aparece no print (cite o assunto dela). Nada genérico.
+- Fale direto com ele, em segunda pessoa ("você"). Nunca "ele".
+- As respostas precisam funcionar como continuação da ÚLTIMA mensagem da conversa (normalmente a dela): reaja a ela primeiro.
+- Copie o jeito dele escrever (minúsculas, abreviações como "vc", sem ponto final, se ele escreve assim). Mensagens curtas, 1 frase de preferência.
+- Prefira afirmações com personalidade a perguntas; no máximo 1 pergunta por resposta.
 Devolva SOMENTE JSON:
 {"fora_do_escopo": false,
  "leitura": "o que está acontecendo na conversa em 1-2 frases",

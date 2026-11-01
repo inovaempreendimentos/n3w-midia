@@ -72,6 +72,7 @@
       else $("#emailMsg").textContent = "Ainda não achei pagamento nesse e-mail. Se acabou de pagar, espere 1 minuto e tente de novo.";
     } catch { $("#emailMsg").textContent = "Sem conexão. Tente de novo."; }
   });
+  if (email && !DEMO) call({ acao: "acesso", email }).then((r) => { if (r.ativo) $("#selo").textContent = "Ilimitado ativo"; }).catch(() => {});
   if (DEMO && q.get("demo") === "res") desenha({ pago: false, interesse: "morno", interesse_porque: "Ela responde rápido e devolve pergunta, mas com mensagens curtas.",
     leitura: "A conversa está viva, mas virou entrevista: você pergunta, ela responde e devolve.", erro: "Três perguntas seguidas sem contar nada sobre você.",
     estrategia: "Pare de perguntar e conte algo seu ligado ao que ela falou da viagem. Isso dá assunto para ela e abre espaço para um convite.",
