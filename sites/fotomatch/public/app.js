@@ -313,6 +313,8 @@ function iniciaCron() {
   };
   tick(); cronTimer = setInterval(tick, 1000);
 }
+// Barra fixa leva direto ao checkout (o botão do meio só rola até a oferta).
+$("#ctaFixo").addEventListener("click", () => $("#ctaCheckout").click());
 $$("[data-oferta]").forEach((b) => b.addEventListener("click", () => { marca("oferta"); $("#oferta").scrollIntoView({ behavior: "smooth", block: "start" }); }));
 $("#ctaCheckout").addEventListener("click", (e) => {
   if (!CHECKOUT_URL) { e.preventDefault(); return; }

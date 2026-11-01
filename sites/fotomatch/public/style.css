@@ -169,3 +169,5 @@ body.com-fixo #app{padding-bottom:110px}
 body.entrada-direta .so-hero{display:none}
 body:not(.entrada-direta) .so-direta{display:none}
 body:not(.entrada-direta) .tela[data-tela="inicio"] .opcoes button{padding-top:11px;padding-bottom:11px;min-height:0}
+
+.preco-topo{margin:4px 0 0;font-size:15px;color:var(--muted)}.preco-topo b{color:var(--ok);font-size:18px}
