@@ -33,7 +33,9 @@ async function api(acao, dados = {}) {
 
 /* ---------- sequência (modelo roastdating.com: quiz longo com reforços → foto → análise → contato → nota) ---------- */
 // ?f=curto: funil curto (1ª pergunta → foto → nota + oferta), teste de 01/11.
-const CURTO = new URLSearchParams(location.search).get("f") === "curto";
+// Teste A/B (01/11): sem ?f na URL, metade das pessoas vai para a versão curta (sem as 16 perguntas). A escolha fica gravada no aparelho.
+const CURTO = (() => { const f = new URLSearchParams(location.search).get("f"); if (f === "curto") return true; if (f === "quiz") return false;
+  try { let v = localStorage.getItem("fm_ab"); if (v !== "curto" && v !== "quiz") { v = Math.random() < 0.5 ? "curto" : "quiz"; localStorage.setItem("fm_ab", v); } return v === "curto"; } catch { return false; } })();
 const SEQ = CURTO ? ["inicio", "envio"] : ["inicio", "lugar", "interesse", "idade", "unico", "objetivo", "objetivo_ok", "frustracao", "rapido", "segura", "solucao", "ajuda", "orcamento", "jeito", "motivacao", "junto", "envio"];
 const EVENTO_FN = "https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/match-evento";
 const ACEITE_FN = "https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/match-aceite";
@@ -128,13 +130,15 @@ function desenhaGrade() {
   $("#addFoto").style.display = estado.fotos.length >= MAX ? "none" : "";
   confere();
 }
-$("#arquivos").addEventListener("change", async (e) => {
+const addArquivos = async (e) => {
   $("#erroEnvio").textContent = "";
   for (const f of [...e.target.files].slice(0, MAX - estado.fotos.length)) {
     try { estado.fotos.push(await reduz(f)); } catch (x) { $("#erroEnvio").textContent = x.message; }
   }
   e.target.value = ""; desenhaGrade();
-});
+};
+$("#arquivos").addEventListener("change", addArquivos);
+$("#camera")?.addEventListener("change", addArquivos);
 function confere() { $("#enviar").disabled = !(estado.fotos.length >= MIN && $("#aceite").checked); }
 $("#aceite").addEventListener("change", confere);
 
