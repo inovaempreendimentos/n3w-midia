@@ -3,10 +3,10 @@
 // Sem nota grátis e sem prévia. Fala com a mesma Edge Function match-nota (lead, contato, foto). ?demo=1 não chama o servidor.
 // O lead é marcado com utm.fm_variante = "b". Cabelo, barba, corpo e estilos ficam só no navegador até a match-nota aceitar esses campos.
 const FN = "https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/match-nota";
-// Mesmo checkout da versão A (Payt, produto RB7EQO, checkout RKOPW6; R$ 29,90 PIX + cartão).
+// Mesmo checkout da versão A (Payt, produto RB7EQO, checkout RKOPW6; R$ 9,90 desde 31/10).
 const CHECKOUT_URL = "https://checkout.payt.com.br/1c8f9b1e8a2f69d9ae85268e8854d13b";
 const CHECKOUT_PARAM_LEAD = "src";
-const PRECO = 29.90;
+const PRECO = 9.90;
 const VARIANTE = "b";
 const DEMO = new URLSearchParams(location.search).has("demo");
 const MIN = 1, MAX = 6, LOOKS_MIN = 2;
@@ -152,7 +152,7 @@ function mostraOferta() {
   if (ls.length) $("#ofertaLooks").textContent = `Nos estilos ${ls.join(", ").replace(/, ([^,]*)$/, " e $1")}, com luz, roupa e cenário certos. É você, mais bem fotografado.`;
   if (CHECKOUT_URL) {
     ["#ctaCheckout", "#ctaCheckout2"].forEach((s) => { const a = $(s); a.href = linkCheckout(); a.removeAttribute("aria-disabled"); });
-    $("#ctaNota").textContent = "Pagamento seguro pela Payt · R$ 27,90 no PIX, na hora.";
+    $("#ctaNota").textContent = "Pagamento seguro pela Payt.";
   }
   ir("oferta");
 }

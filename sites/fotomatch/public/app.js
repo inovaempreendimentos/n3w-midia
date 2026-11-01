@@ -1,10 +1,10 @@
 // FotoMatch · LP-quiz (rascunho). Fala só com a Edge Function match-nota (verify_jwt=false; autorização por token do lead).
 // ?demo=1 mostra um resultado de EXEMPLO sem chamar a IA (para revisão do Othon na prévia).
 const FN = "https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/match-nota";
-// Checkout Payt do FotoMatch (produto RB7EQO, checkout RKOPW6; R$ 29,90 PIX + cartão). Aprovado pelo Othon em 11/10.
+// Checkout Payt do FotoMatch (produto RB7EQO, checkout RKOPW6; R$ 9,90 desde 31/10 23h55, decisão do Othon para validar a 1ª venda; PIX com 6% de desconto).
 const CHECKOUT_URL = "https://checkout.payt.com.br/1c8f9b1e8a2f69d9ae85268e8854d13b";
 const CHECKOUT_PARAM_LEAD = "src"; // id do lead vai neste parâmetro (Checkout Expert confirma o nome aceito pela Payt).
-const PRECO = 29.90; // BRL. Oferta "15 fotos com o seu rosto" (mesmo valor do botão e do Purchase em obrigado.html).
+const PRECO = 9.90; // BRL. Oferta "15 fotos com o seu rosto" (mesmo valor do botão e do Purchase em obrigado.html).
 const DEMO = new URLSearchParams(location.search).has("demo");
 const MIN = 1, MAX = 9;
 
@@ -305,7 +305,7 @@ function iniciaCron() {
     if (!s) {
       clearInterval(cronTimer);
       $("#previa").classList.add("expirada");
-      $("#previaTxt").textContent = "A prévia expirou. As 15 fotos completas continuam disponíveis por R$ 29,90.";
+      $("#previaTxt").textContent = "A prévia expirou. As 15 fotos completas continuam disponíveis por R$ 9,90.";
       $("#cronNota").textContent = "A prévia expirou. As 15 fotos continuam disponíveis.";
       $(".cron-t").firstChild.textContent = "PRÉVIA EXPIRADA ";
       $("#cron").textContent = "00:00";
