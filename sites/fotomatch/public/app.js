@@ -32,7 +32,10 @@ async function api(acao, dados = {}) {
 
 
 /* ---------- sequência (modelo roastdating.com: quiz longo com reforços → foto → análise → contato → nota) ---------- */
-const SEQ = ["inicio", "lugar", "interesse", "idade", "unico", "objetivo", "objetivo_ok", "frustracao", "rapido", "segura", "solucao", "ajuda", "orcamento", "jeito", "motivacao", "junto", "envio"];
+// ?f=curto: funil curto (1ª pergunta → foto → nota + oferta), teste de 01/11.
+const CURTO = new URLSearchParams(location.search).get("f") === "curto";
+const SEQ = CURTO ? ["inicio", "envio"] : ["inicio", "lugar", "interesse", "idade", "unico", "objetivo", "objetivo_ok", "frustracao", "rapido", "segura", "solucao", "ajuda", "orcamento", "jeito", "motivacao", "junto", "envio"];
+const EVENTO_FN = "https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/match-evento";
 const ACEITE_FN = "https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/match-aceite";
 
 /* ---------- registro de telas (sem dado pessoal): onde as pessoas desistem ---------- */
@@ -44,6 +47,8 @@ const SESSAO = (() => { const n = () => Array.from(crypto.getRandomValues(new Ui
   try { let v = sessionStorage.getItem("fm_s"); if (!v) { v = n(); sessionStorage.setItem("fm_s", v); } return v; } catch { return n(); } })();
 function marca(tela) {
   if (DEMO) return;
+  if (CURTO) { try { fetch(EVENTO_FN, { method: "POST", headers: { "Content-Type": "text/plain" }, keepalive: true,
+    body: JSON.stringify({ sessao: SESSAO, pagina: "CURTO", tela, ordem: ORDEM_TELA[tela] ?? null, anuncio: utm.utm_content || null }) }).catch(() => {}); } catch { /* */ } return; }
   try { fetch(FN, { method: "POST", headers: { "Content-Type": "application/json" }, keepalive: true,
     body: JSON.stringify({ acao: "evento", sessao: SESSAO, pagina: "A", tela, ordem: ORDEM_TELA[tela] ?? null, anuncio: utm.utm_content || null, lead: estado.lead && estado.lead.id }) }).catch(() => {}); } catch { /* */ }
 }
@@ -56,8 +61,8 @@ function marcaSaida() {
   const ativa = document.querySelector(".tela.ativa"); if (!ativa || ativa.dataset.tela !== "inicio") return;
   saidaMarcada = true;
   const s = (Date.now() - T0) / 1000, faixa = s < 3 ? "0-3s" : s < 10 ? "3-10s" : s < 30 ? "10-30s" : "30s+";
-  const body = JSON.stringify({ acao: "evento", sessao: SESSAO, pagina: "A", tela: "saiu-" + faixa + (rolou ? "-rolou" : ""), ordem: 50, anuncio: utm.utm_content || null });
-  try { navigator.sendBeacon(FN, new Blob([body], { type: "text/plain" })); } catch { /* */ }
+  const body = JSON.stringify({ acao: "evento", sessao: SESSAO, pagina: CURTO ? "CURTO" : "A", tela: "saiu-" + faixa + (rolou ? "-rolou" : ""), ordem: 50, anuncio: utm.utm_content || null });
+  try { navigator.sendBeacon(CURTO ? EVENTO_FN : FN, new Blob([body], { type: "text/plain" })); } catch { /* */ }
 }
 addEventListener("pagehide", marcaSaida);
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "hidden") marcaSaida(); });
@@ -95,7 +100,7 @@ $("#seguraOk").addEventListener("click", () => proximo("segura"));
 function utmComQuiz() {
   const r = estado.respostas;
   const quiz = ["interesse", "frustracao", "ajuda", "orcamento", "motivacao"].map((k) => k.slice(0, 3) + "=" + (r[k] || "")).join(";");
-  return { fm_quiz: quiz, fm_variante: "a", fm_entrada: ENTRADA_DIRETA ? "direta" : "topo", ...utm };
+  return { fm_quiz: quiz, fm_variante: CURTO ? "a-curto" : "a", fm_entrada: ENTRADA_DIRETA ? "direta" : "topo", ...utm };
 }
 
 /* ---------- fotos ---------- */
