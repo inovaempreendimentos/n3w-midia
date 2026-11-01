@@ -16,7 +16,7 @@
   // checkout
   const CK = document.body.dataset.checkout;
   const cta = $("#cta");
-  if (CK) { const u = new URL(CK); Object.entries(utm).forEach(([k, v]) => u.searchParams.set(k, v)); cta.href = u.toString(); } else cta.href = "#";
+  if (CK) { const u = new URL(CK); Object.entries(utm).forEach(([k, v]) => u.searchParams.set(k, v)); u.searchParams.set("src", SESSAO); cta.href = u.toString(); } else cta.href = "#";
   cta.addEventListener("click", () => { marca("checkout", 9); fb("InitiateCheckout", { content_name: "Copiloto de Conversa", currency: "BRL", value: 9.9 }); });
 
   let objetivo = "continuar";
@@ -67,12 +67,12 @@
   $("#outro").addEventListener("click", () => { imgs = []; $("#thumbs").innerHTML = ""; $("#arq").value = ""; $("#vai").disabled = true; mostra("envio"); scrollTo(0, 0); });
   $("#entrar").addEventListener("click", async () => {
     const e = $("#email").value.trim(); if (!e) return; $("#emailMsg").textContent = "Verificando…";
-    try { const r = await call({ acao: "acesso", email: e });
+    try { const r = await call({ acao: "acesso", email: e, sessao: SESSAO });
       if (r.ativo) { email = r.email; ls.set("cp_e", email); $("#emailMsg").textContent = "✓ Copiloto liberado. Mande seus prints."; $("#selo").textContent = "Ilimitado ativo"; $("#pague").hidden = true; mostra("envio"); scrollTo(0, 0); }
       else $("#emailMsg").textContent = "Ainda não achei pagamento nesse e-mail. Se acabou de pagar, espere 1 minuto e tente de novo.";
     } catch { $("#emailMsg").textContent = "Sem conexão. Tente de novo."; }
   });
-  if (email && !DEMO) call({ acao: "acesso", email }).then((r) => { if (r.ativo) $("#selo").textContent = "Ilimitado ativo"; }).catch(() => {});
+  if (!DEMO) call({ acao: "acesso", email, sessao: SESSAO }).then((r) => { if (r.ativo) $("#selo").textContent = "Ilimitado ativo"; }).catch(() => {});
   if (DEMO && q.get("demo") === "res") desenha({ pago: false, interesse: "morno", interesse_porque: "Ela responde rápido e devolve pergunta, mas com mensagens curtas.",
     leitura: "A conversa está viva, mas virou entrevista: você pergunta, ela responde e devolve.", erro: "Três perguntas seguidas sem contar nada sobre você.",
     estrategia: "Pare de perguntar e conte algo seu ligado ao que ela falou da viagem. Isso dá assunto para ela e abre espaço para um convite.",

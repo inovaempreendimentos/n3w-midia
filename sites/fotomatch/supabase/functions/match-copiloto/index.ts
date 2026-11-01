@@ -19,7 +19,17 @@ async function db(path: string, init: { method?: string; body?: unknown; prefer?
 const limpaEmail = (e: unknown) => { const s = String(e || "").trim().toLowerCase(); return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s) && s.length < 200 ? s : ""; };
 const PAGO = ["pago", "paga", "paid", "aprovado", "aprovada", "approved", "completo", "concluida", "confirmado"];
 
-async function temAcesso(email: string): Promise<boolean> {
+async function porSessao(sessao: string): Promise<boolean> {
+  if (!/^[a-f0-9]{8,64}$/.test(sessao)) return false;
+  const v = (await db(`vendas?raw->link->sources->>src=eq.${sessao}&select=status,raw&limit=5`)).data || [];
+  const ok = v.find((x: any) => /aprovad|paid|approved|pago/i.test(String(x.status)));
+  const em = limpaEmail(ok?.raw?.customer?.email);
+  if (ok && em) await db("match_copiloto_acesso", { method: "POST", prefer: "resolution=merge-duplicates,return=minimal", body: { email: em, ate: new Date(Date.now() + 30 * 864e5).toISOString(), origem: "payt-src" } });
+  return !!ok;
+}
+
+async function temAcesso(email: string, sessao = ""): Promise<boolean> {
+  if (sessao && (await porSessao(sessao))) return true;
   if (!email) return false;
   const a = (await db(`match_copiloto_acesso?email=eq.${encodeURIComponent(email)}&ate=gt.${new Date().toISOString()}&select=email`)).data;
   if (a?.length) return true;
@@ -68,7 +78,7 @@ async function analisar(b: any) {
   if (!imgs.length) return out(400, { erro: "Mande pelo menos 1 print." });
   if (!OPENAI) return out(503, { erro: "IA indisponível no momento. Tente de novo em alguns minutos." });
   const email = limpaEmail(b.email);
-  const pago = await temAcesso(email);
+  const pago = await temAcesso(email, sessao);
   if (pago) {
     const dia = new Date(Date.now() - 864e5).toISOString();
     const n = (await db(`match_copiloto_uso?email=eq.${encodeURIComponent(email)}&criado_em=gt.${dia}&select=id`)).data?.length || 0;
@@ -103,7 +113,7 @@ Deno.serve(async (req) => {
   if (req.method !== "POST") return out(405, { erro: "método" });
   let b: any = {}; try { b = JSON.parse(await req.text()); } catch { return out(400, { erro: "json" }); }
   try {
-    if (b.acao === "acesso") { const e = limpaEmail(b.email); return out(200, { email: e || null, ativo: await temAcesso(e) }); }
+    if (b.acao === "acesso") { const e = limpaEmail(b.email); return out(200, { email: e || null, ativo: await temAcesso(e, String(b.sessao || "")) }); }
     if (b.acao === "analisar") return await analisar(b);
     return out(400, { erro: "acao" });
   } catch (e) { console.error(e); return out(500, { erro: "Falha inesperada. Tente de novo." }); }
