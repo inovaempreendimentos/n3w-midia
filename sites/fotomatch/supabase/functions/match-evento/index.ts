@@ -1,8 +1,8 @@
 // FotoMatch — match-evento: registra que uma sessão chegou numa tela das páginas de teste de oferta (sem dado pessoal).
-// POST {sessao, pagina, tela, ordem?, anuncio?}. Páginas: A, B, CURTO, PRINTS, CONVERSA, RESPONDE, GLOWUP.
+// POST {sessao, pagina, tela, ordem?, anuncio?}. Páginas: A, B, CURTO, PRINTS, CONVERSA, RESPONDE, COPILOTO, GLOWUP.
 const SB = Deno.env.get("SUPABASE_URL")!, SK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type", "Access-Control-Allow-Methods": "POST, OPTIONS" };
-const PAGINAS = ["A", "B", "CURTO", "PRINTS", "CONVERSA", "RESPONDE", "GLOWUP"];
+const PAGINAS = ["A", "B", "CURTO", "PRINTS", "CONVERSA", "RESPONDE", "COPILOTO", "GLOWUP"];
 const txt = (s: unknown, n: number) => String(s ?? "").replace(/[<>]/g, "").trim().slice(0, n);
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
