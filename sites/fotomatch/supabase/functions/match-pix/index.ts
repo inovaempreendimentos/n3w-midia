@@ -1,4 +1,4 @@
-// FOTOMATCH — match-pix (02/11/2026): Pix dentro da própria página, via Mercado Pago (conta pessoal do Othon, API de Orders).
+// FOTOMATCH — match-pix (02/11/2026): Pix dentro da própria página, via Mercado Pago (API de Orders). Conta: ver CONTA_PADRAO.
 // Segredo: MP_TOKEN_FOTOMATCH (Access Token de produção da aplicação "FotoMatch"). Sem ele, responde "indisponível" e a página cai no checkout da Payt.
 // Ações (POST, JSON ou text/plain):
 //   criar   {tipo, lead_id? | rid? | sessao?, email, bump?, preco?, utm?}  → {ref, qr, qr64, valor, expira}
@@ -7,7 +7,11 @@
 //   webhook (GET/POST do Mercado Pago)  — nunca confia no corpo: confere a order na API e só então marca pago.
 // Preço vem da tabela PRECO (servidor), nunca do cliente; o A/B de preço manda só a "faixa" (a,b,c).
 const SB = Deno.env.get("SUPABASE_URL")!, SK = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-const MP = Deno.env.get("MP_TOKEN_FOTOMATCH") || "";
+// 02/11 19h: Othon mandou usar a conta Mercado Pago PJ N3W DIGITAL LTDA (a mesma do Tarot) até as próximas vendas / CNPJ novo.
+// Troca de conta: mudar CONTA_PADRAO. Cada pedido guarda a conta em entrega.conta, e a conferência usa o token da conta em que foi criado.
+const CONTA_PADRAO = Deno.env.get("MATCH_PIX_CONTA") || "n3w";
+const TOKENS: Record<string, string> = { n3w: Deno.env.get("TAROT_MP_ACCESS_TOKEN") || "", fotomatch: Deno.env.get("MP_TOKEN_FOTOMATCH") || "" };
+const MP = TOKENS[CONTA_PADRAO] || "";
 const cors = { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "content-type", "Access-Control-Allow-Methods": "GET, POST, OPTIONS" };
 const out = (c: number, o: unknown) => new Response(JSON.stringify(o), { status: c, headers: { ...cors, "Content-Type": "application/json", "Cache-Control": "no-store" } });
 async function db(path: string, init: { method?: string; body?: unknown; prefer?: string } = {}) {
@@ -16,8 +20,8 @@ async function db(path: string, init: { method?: string; body?: unknown; prefer?
   if (!r.ok) console.error("db", path.split("?")[0], r.status, t.slice(0, 200));
   return { ok: r.ok, data };
 }
-async function mp(path: string, init: RequestInit = {}) {
-  const r = await fetch("https://api.mercadopago.com" + path, { ...init, headers: { Authorization: "Bearer " + MP, "Content-Type": "application/json", accept: "application/json", ...(init.headers || {}) } });
+async function mp(path: string, init: RequestInit = {}, conta = CONTA_PADRAO) {
+  const r = await fetch("https://api.mercadopago.com" + path, { ...init, headers: { Authorization: "Bearer " + (TOKENS[conta] || MP), "Content-Type": "application/json", accept: "application/json", ...(init.headers || {}) } });
   let body: any = null; try { body = await r.json(); } catch { /* */ }
   return { ok: r.ok, status: r.status, body };
 }
@@ -55,8 +59,8 @@ async function criar(b: any, req: Request) {
   }
   const ref = "FM" + rnd(5).toUpperCase();
   const r = await mp("/v1/orders", { method: "POST", headers: { "X-Idempotency-Key": crypto.randomUUID() },
-    body: JSON.stringify({ type: "online", processing_mode: "automatic", external_reference: ref, total_amount: valor.toFixed(2), description: DESCR[tipo] + (bump ? " + bio" : ""),
-      payer: { email, first_name: String(b.nome || "Cliente").split(" ")[0].slice(0, 40) },
+    body: JSON.stringify({ type: "online", processing_mode: "automatic", external_reference: ref, total_amount: valor.toFixed(2), ...(CONTA_PADRAO === "fotomatch" ? { description: DESCR[tipo] + (bump ? " + bio" : "") } : {}),
+      payer: CONTA_PADRAO === "fotomatch" ? { email, first_name: String(b.nome || "Cliente").split(" ")[0].slice(0, 40) } : { email },
       transactions: { payments: [{ amount: valor.toFixed(2), payment_method: { id: "pix", type: "bank_transfer" } }] } }) });
   if (!r.ok) { console.error("mp order", r.status, JSON.stringify(r.body).slice(0, 400)); return out(502, { erro: "Não consegui gerar o Pix agora. Tente de novo em instantes." }); }
   const pm = r.body.transactions?.payments?.[0]?.payment_method || {};
@@ -64,14 +68,14 @@ async function criar(b: any, req: Request) {
   const rastreio = { fbp: typeof b.fbp === "string" ? b.fbp.slice(0, 80) : null, fbc: typeof b.fbc === "string" ? b.fbc.slice(0, 200) : null,
     client_ip: (req.headers.get("cf-connecting-ip") || (req.headers.get("x-forwarded-for") || "").split(",")[0]).trim().slice(0, 64) || null, client_ua: (req.headers.get("user-agent") || "").slice(0, 300) || null };
   const ins = await db("match_orders", { method: "POST", prefer: "return=minimal", body: { ref, lead_id, pacote: tipo === "kit" ? "kit" : tipo === "fotos" ? "p15" : tipo, valor, bump_bio: bump, gateway: "mp", gateway_id: String(r.body.id), status: "aguardando_pagamento", email, teste: false,
-    utm: { ...utm, faixa, pix_pagina: true, rid, sessao_cop: sessao }, entrega: { meio: "pix", rastreio, ...(tipo === "kit" ? { copiloto: true } : {}) } } });
+    utm: { ...utm, faixa, pix_pagina: true, rid, sessao_cop: sessao }, entrega: { meio: "pix", conta: CONTA_PADRAO, rastreio, ...(tipo === "kit" ? { copiloto: true } : {}) } } });
   if (!ins.ok) return out(500, { erro: "Falha ao registrar. Tente de novo." });
   return out(200, { ref, valor, qr: pm.qr_code, qr64: pm.qr_code_base64, expira: Date.now() + 30 * 60e3 });
 }
 
 async function conferePago(o: any): Promise<boolean> {
   if (o.status === "pago" || o.status === "em_producao" || o.status === "entregue") return true;
-  const r = await mp("/v1/orders/" + encodeURIComponent(o.gateway_id)); if (!r.ok) return false;
+  const r = await mp("/v1/orders/" + encodeURIComponent(o.gateway_id), {}, o.entrega?.conta || "fotomatch"); if (!r.ok) return false;
   const od = r.body || {}, p = od.transactions?.payments?.[0] || {};
   const pago = od.status === "processed" || p.status === "processed" || od.status_detail === "accredited" || p.status_detail === "accredited";
   return pago && od.external_reference === o.ref && Number(od.total_amount) >= Number(o.valor) - 0.01;
@@ -99,6 +103,13 @@ async function status(b: any) {
   const pago = ["pago", "em_producao", "entregue"].includes(o2.status);
   return out(200, { pago, status: o2.status, lead_id: o2.lead_id, rid: o2.utm?.rid || null, pacote: o2.pacote });
 }
+// varrer: chamado pelo cron a cada minuto (a conta N3W tem o webhook apontado para o Tarot, então a confirmação vem daqui).
+async function varrer() {
+  const desde = new Date(Date.now() - 3 * 3600e3).toISOString();
+  const os = (await db(`match_orders?gateway=eq.mp&status=eq.aguardando_pagamento&criado_em=gt.${desde}&select=*&limit=50`)).data || [];
+  let n = 0; for (const o of os) if (await conferePago(o)) { await confirma(o); n++; }
+  return out(200, { conferidos: os.length, pagos: n });
+}
 async function webhook(b: any, url: URL) {
   const tipo = String(b?.type || url.searchParams.get("type") || b?.topic || url.searchParams.get("topic") || "");
   const id = String(b?.data?.id || url.searchParams.get("data.id") || url.searchParams.get("id") || "");
@@ -115,8 +126,9 @@ Deno.serve(async (req) => {
   let b: any = {}; try { const t = await req.text(); b = t ? JSON.parse(t) : {}; } catch { b = {}; }
   try {
     if (url.pathname.endsWith("/webhook")) return await webhook(b, url);
-    if (b.acao === "saude") { if (!MP) return out(200, { mp: "sem token" }); const r = await mp("/users/me"); return out(200, { mp: r.ok ? "token válido" : "recusado " + r.status, conta: r.ok ? r.body?.site_id : null }); }
+    if (b.acao === "saude") { if (!MP) return out(200, { mp: "sem token" }); const r = await mp("/users/me"); return out(200, { mp: r.ok ? "token válido" : "recusado " + r.status, conta: CONTA_PADRAO, site: r.ok ? r.body?.site_id : null }); }
     if (b.acao === "criar") return await criar(b, req);
+    if (b.acao === "varrer") return await varrer();
     if (b.acao === "status") return await status(b);
     return out(400, { erro: "acao" });
   } catch (e) { console.error(e); return out(500, { erro: "Falha inesperada." }); }

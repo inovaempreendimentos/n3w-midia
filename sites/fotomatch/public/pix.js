@@ -38,7 +38,7 @@
   .fmpx-banco b{color:var(--ink,#F6F0EA)}`;
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
   const SELO = `<div class="fmpx-mp"><span class="mpl">MP</span><div><b>Pagamento via Mercado Pago</b><span>Pix processado e protegido pelo Mercado Pago</span></div><span class="cad" aria-hidden="true">🔒</span></div>`;
-  const BANCO = `<p class="fmpx-banco">No app do seu banco, o recebedor aparece como <b>Othon Nascimento · Mercado Pago</b>. É a conta da FotoMatch.</p>`;
+  const BANCO = `<p class="fmpx-banco">No app do seu banco, o recebedor aparece como <b>N3W DIGITAL LTDA · Mercado Pago</b>. É a empresa responsável pela FotoMatch.</p>`;
   const real = (v) => "R$ " + Number(v).toFixed(2).replace(".", ",");
   const cookie = (n) => { const m = document.cookie.match("(^|;)\\s*" + n + "=([^;]+)"); return m ? m[2] : null; };
   const fb = (ev, d) => { try { if (window.fbq) fbq("track", ev, d); } catch { /* */ } };
