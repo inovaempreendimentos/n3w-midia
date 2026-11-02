@@ -1,0 +1,48 @@
+<!doctype html><html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>FotoMatch</title>
+<script>!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(window,document,'script','https://connect.facebook.net/en_US/fbevents.js');if(!location.search.includes('demo'))fbq('init','39072077939073915'),fbq('track','PageView');</script>
+<style>
+*{box-sizing:border-box;margin:0}body{background:#111;color:#f4f1ee;font:16px/1.5 Inter,system-ui,-apple-system,sans-serif}
+main{max-width:480px;margin:0 auto;padding:18px 16px 40px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}.logo{font-weight:800;font-size:18px}.logo b{color:#fd267a}
+.selo{font-size:12px;background:#22d48f22;color:#22d48f;padding:5px 10px;border-radius:99px;font-weight:700}
+h1{font-size:28px;line-height:1.15;letter-spacing:-.01em;margin:0 0 14px}
+.cr{border-radius:18px;overflow:hidden;margin:0 0 18px;box-shadow:0 10px 30px rgba(0,0,0,.5)}.cr img{width:100%;display:block}
+.card{background:#1d1a18;border:1px solid #2c2724;border-radius:18px;padding:16px;margin:0 0 14px}
+.card h2{font-size:15px;text-transform:uppercase;letter-spacing:.06em;color:#a99e95;margin:0 0 10px}
+.q{font-weight:700;font-size:18px;margin-bottom:10px}
+.op{display:grid;gap:8px}.op button{all:unset;cursor:pointer;background:#2a2522;border-radius:12px;padding:13px 14px;font-weight:600}
+.op button.on{background:#fd267a;color:#fff}
+ol{padding-left:22px;display:grid;gap:8px}ol li::marker{color:#fd267a;font-weight:800}
+.mec{font-weight:800;color:#fd267a}
+.btn{display:block;text-align:center;text-decoration:none;background:linear-gradient(90deg,#fd267a,#ff6036);color:#fff;font-weight:800;font-size:19px;padding:17px;border-radius:99px;box-shadow:0 10px 24px rgba(253,38,122,.4)}
+.btn small{display:block;font-size:13px;font-weight:600;opacity:.9}
+.fine{font-size:12px;color:#8f857c;text-align:center;margin-top:10px}
+.sticky{position:sticky;bottom:12px;margin-top:16px}
+</style></head><body><main>
+<div class="top"><div class="logo">Foto<b>Match</b></div><div class="selo">Pix · libera na hora</div></div>
+<h1 id="t">…</h1>
+<div class="cr"><img id="img" alt=""></div>
+<div class="card" id="quiz"><h2>Rapidinho</h2><div class="q" id="q"></div><div class="op" id="op"></div></div>
+<div class="card"><h2>Como funciona · <span class="mec" id="nome"></span></h2><ol id="mec"></ol></div>
+<div class="sticky"><a class="btn" id="btn" href="#"><span id="bt"></span> · R$ 9,90<small>pagamento único via Pix · sem assinatura</small></a></div>
+<p class="fine">Exemplos de tela ilustrativos. Fotos geradas com o seu rosto a partir das suas selfies.</p>
+</main>
+<script>
+(async function(){
+const EV="https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/match-evento";
+const q=new URLSearchParams(location.search),c=(q.get('c')||'A1').toUpperCase(),DEMO=q.has('demo');
+const ls={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,v)=>{try{localStorage.setItem(k,v)}catch{}}};
+const S=ls.get('t30_s')||(()=>{const v=Array.from(crypto.getRandomValues(new Uint8Array(10)),x=>x.toString(16).padStart(2,'0')).join('');ls.set('t30_s',v);return v})();
+const marca=(tela,ordem,extra)=>{if(DEMO)return;fetch(EV,{method:'POST',headers:{'Content-Type':'text/plain'},keepalive:true,body:JSON.stringify({sessao:S,pagina:'T30',tela,ordem,anuncio:'T-'+c,...(extra||{})})}).catch(()=>{})};
+const D=await fetch('c.json?v=1').then(r=>r.json());const d=D[c]||D.A1;
+document.getElementById('t').textContent=d.t;document.getElementById('img').src='../ad/t30/'+c+'.jpg';
+document.getElementById('q').textContent=d.q;document.getElementById('nome').textContent=d.nome;document.getElementById('bt').textContent=d.btn;
+document.getElementById('mec').innerHTML=d.mec.map(x=>'<li></li>').join('');[...document.querySelectorAll('#mec li')].forEach((li,i)=>li.textContent=d.mec[i]);
+const op=document.getElementById('op');d.o.forEach((t,i)=>{const b=document.createElement('button');b.type='button';b.textContent=t;b.onclick=()=>{[...op.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');marca('quiz:'+i,1)};op.appendChild(b)});
+marca('inicio',0);
+const u=new URL(d.dest,location.href);['utm_source','utm_medium','utm_campaign','utm_term','fbclid'].forEach(k=>q.get(k)&&u.searchParams.set(k,q.get(k)));u.searchParams.set('utm_content','T-'+c);
+const btn=document.getElementById('btn');btn.href=u.toString();
+btn.addEventListener('click',()=>{marca('ic',2);try{if(!DEMO&&window.fbq)fbq('trackCustom','T30_Botao',{value:9.9,currency:'BRL',content_name:'T-'+c})}catch{}});
+})();
+</script></body></html>

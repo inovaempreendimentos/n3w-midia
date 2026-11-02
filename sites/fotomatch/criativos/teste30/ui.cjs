@@ -1,4 +1,4 @@
-const F=n=>`url(faces/f${n}.jpg)`;
+const F=n=>`url(../faces/f${n}.jpg)`;
 const SB=(w)=>`<div class="sb${w?' w':''}"><span>21:47</span><span>▂▄▆ 5G ▮</span></div>`;
 const phone=(x,y,w,h,inner,ex=true,dark=false)=>`<div class="phone" style="left:${x}px;top:${y}px;width:${w}px;height:${h}px${dark?';background:#111':''}">${inner}${ex?`<div class="ex${dark?' w':''}">EXEMPLO</div>`:''}</div>`;
 const card=(f,nome,idade,dist,extra='')=>`${SB()}<div class="card" style="background-image:${F(f)}"><div class="dots"><i></i><i></i><i></i><i></i></div><div class="grad"></div><div class="nm">${nome} <span>${idade}</span></div><div class="ds">📍 a ${dist} km de distância</div>${extra}</div><div class="btns"><b class="x">✕</b><b class="s">★</b><b class="h">♥</b></div>`;
