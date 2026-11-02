@@ -26,7 +26,7 @@ ol{padding-left:22px;display:grid;gap:8px}ol li::marker{color:#fd267a;font-weigh
 <div class="card" id="quiz"><h2>Rapidinho</h2><div class="q" id="q"></div><div class="op" id="op"></div></div>
 <div class="card"><h2>Como funciona · <span class="mec" id="nome"></span></h2><ol id="mec"></ol></div>
 <div class="sticky"><a class="btn" id="btn" href="#"><span id="bt"></span> · R$ 9,90<small>pagamento único via Pix · sem assinatura</small></a></div>
-<p class="fine">Exemplos de tela ilustrativos. Fotos geradas com o seu rosto a partir das suas selfies.</p>
+<p class="fine" id="fine">Telas de exemplo, ilustrativas.</p>
 </main>
 <script>
 (async function(){
@@ -40,6 +40,7 @@ document.getElementById('t').textContent=d.t;document.getElementById('img').src=
 document.getElementById('q').textContent=d.q;document.getElementById('nome').textContent=d.nome;document.getElementById('bt').textContent=d.btn;
 document.getElementById('mec').innerHTML=d.mec.map(x=>'<li></li>').join('');[...document.querySelectorAll('#mec li')].forEach((li,i)=>li.textContent=d.mec[i]);
 const op=document.getElementById('op');d.o.forEach((t,i)=>{const b=document.createElement('button');b.type='button';b.textContent=t;b.onclick=()=>{[...op.children].forEach(x=>x.classList.remove('on'));b.classList.add('on');marca('quiz:'+i,1)};op.appendChild(b)});
+if(d.of==='fotos')document.getElementById('fine').textContent='Telas de exemplo, ilustrativas. As fotos são geradas com o seu rosto a partir das suas selfies.';
 marca('inicio',0);
 const u=new URL(d.dest,location.href);['utm_source','utm_medium','utm_campaign','utm_term','fbclid'].forEach(k=>q.get(k)&&u.searchParams.set(k,q.get(k)));u.searchParams.set('utm_content','T-'+c);
 const btn=document.getElementById('btn');btn.href=u.toString();
