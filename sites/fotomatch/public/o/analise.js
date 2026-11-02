@@ -68,7 +68,7 @@
     const ckUrl = () => { if (!CK) return "#"; const u = new URL(CK); Object.entries(utm).forEach(([k, v]) => u.searchParams.set(k, v)); if (rid) u.searchParams.set("src", rid); return u.toString(); };
     const resultado = (r) => {
       rid = r.rid; if (rid) ls.set("fo_rid_" + TIPO, rid);
-      $("#res").innerHTML = R[TIPO](r.previa, false) + `<div class="card" style="border-color:var(--warn);text-align:center"><p class="r-h" style="color:var(--warn)">Análise completa pronta</p><p style="margin:0 0 12px">A outra parte da sua análise já foi feita. Libere agora e veja tudo nesta tela.</p><a class="btn" data-cta>Liberar tudo · R$ 9,90</a><p class="mini" style="margin:8px 0 0">Pagamento único. Pix ou cartão. Libera na hora.</p></div>` + TRANCAS[TIPO](r.trancado || {});
+      $("#res").innerHTML = R[TIPO](r.previa, false) + `<div class="card" style="border-color:var(--warn);text-align:center"><p class="r-h" style="color:var(--warn)">Análise completa pronta</p><p style="margin:0 0 12px">A outra parte da sua análise já foi feita. Libere agora e veja tudo nesta tela.</p><a class="btn" data-cta>Liberar tudo · R$ 9,90</a><p class="mini" style="margin:8px 0 0">Pagamento único via Pix. Libera na hora, nesta tela.</p></div>` + TRANCAS[TIPO](r.trancado || {});
       document.querySelectorAll("[data-cta]").forEach((a) => { a.href = ckUrl(); a.addEventListener("click", (e) => {
         marca("checkout", 9);
         if (window.FMPix && q.get("pg") !== "payt" && rid) { // Pix na página (02/11)

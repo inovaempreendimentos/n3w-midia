@@ -14,7 +14,7 @@
 <h2>Mande uma destas (grátis)</h2><div id="dLivres"></div>
 <div class="card" style="border-color:var(--warn);text-align:center"><p class="r-h" style="color:var(--warn)">Kit O Que Mandar completo</p>
 <p style="margin:0 0 12px"><b>35 mensagens prontas</b> para cada momento: primeira mensagem, resposta seca, entrevista, convite, retomada e o que fazer quando ela diz não.</p>
-<a class="btn" data-cta>Liberar o kit · R$ 9,90</a><p class="mini" style="margin:8px 0 0">Pagamento único. Pix ou cartão. Abre na hora.</p></div>
+<a class="btn" data-cta>Liberar o kit · R$ 9,90</a><p class="mini" style="margin:8px 0 0">Pagamento único via Pix. Abre na hora.</p></div>
 <div id="dTrancas"></div>
 <div class="garantia"><b>Garantia de 7 dias.</b> Não gostou, devolvemos 100% do valor.</div>
 </section>
@@ -29,7 +29,11 @@ const marca=(t,o)=>{if(DEMO)return;fetch('https://cdtfglylekiyxdmrgbne.supabase.
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 marca('inicio',0);
 const ck=()=>{const u=new URL(document.body.dataset.checkout);Object.entries(utm).forEach(([k,v])=>u.searchParams.set(k,v));u.searchParams.set('src',S);return u.toString()};
-document.querySelectorAll('[data-cta]').forEach(a=>{a.href=ck();a.addEventListener('click',()=>{marca('checkout',9);try{if(!DEMO&&window.fbq)fbq('track','InitiateCheckout',{content_name:'CONVERSA',currency:'BRL',value:9.9})}catch(e){}})});
+document.querySelectorAll('[data-cta]').forEach(a=>{a.href=ck();a.addEventListener('click',(e)=>{marca('checkout',9);
+if(window.FMPix&&q.get('pg')!=='payt'){e.preventDefault();marca('pix',9);let em='';try{em=localStorage.getItem('fm_email')||''}catch(x){}
+FMPix.abrir({tipo:'mensagens',sessao:S,email:em,utm,pagina:'CONVERSA',nome:'Kit O Que Mandar · 35 mensagens prontas',valor:9.9,lembra:(x)=>{try{localStorage.setItem('fm_email',x)}catch(y){}},
+onPago:()=>{marca('pago',10);try{sessionStorage.setItem('fo_px_/o/ok-kit.html','1')}catch(y){}location.href='ok-kit.html'},fallback:()=>{location.href=ck()}});return;}
+try{if(!DEMO&&window.fbq)fbq('track','InitiateCheckout',{content_name:'CONVERSA',currency:'BRL',value:9.9})}catch(e){}})});
 const mostra=k=>{const d=D[k];$('#dDiag').textContent=d.diag;$('#dPq').textContent=d.porque;
 $('#dLivres').innerHTML=d.livres.map(([t,x])=>'<div class="resp"><button class="cp" data-t="'+esc(x)+'">Copiar</button><p class="r-h">'+esc(t)+'</p><p class="tx">'+esc(x)+'</p></div>').join('');
 $('#dTrancas').innerHTML=(d.resto?'<div class="card tranca"><p class="r-h">Mais '+d.resto+' mensagens para esse momento</p><p class="tx">Conteúdo liberado no kit</p><p class="tx">Conteúdo liberado no kit</p></div>':'')+SEC.filter((s,i)=>Object.keys(D)[i]!==k).map(s=>'<div class="card tranca"><p class="r-h">'+esc(s.replace(/^\d\. /,''))+'</p><p class="tx">Conteúdo liberado no kit</p></div>').join('');

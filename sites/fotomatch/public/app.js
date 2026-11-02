@@ -279,7 +279,7 @@ function mostraResultado(nota, exemplo) {
   desenhaDims(nota.dimensoes);
   $("#errosLista").innerHTML = "";
   nota.erros.forEach((e) => { const li = document.createElement("li"); li.textContent = e; $("#errosLista").appendChild(li); });
-  if (CHECKOUT_URL) { const a = $("#ctaCheckout"); a.href = linkCheckout(); a.removeAttribute("aria-disabled"); $("#ctaNota").textContent = "Pagamento seguro pela Payt."; }
+  if (CHECKOUT_URL) { const a = $("#ctaCheckout"); a.href = linkCheckout(); a.removeAttribute("aria-disabled"); $("#ctaNota").textContent = PIX_NA_PAGINA ? "Pix na hora, direto nesta tela. Sem mensalidade." : "Pagamento seguro pela Payt."; }
   ir("resultado");
   pedePrevia(exemplo).catch(previaDepois);
   iniciaCron();
