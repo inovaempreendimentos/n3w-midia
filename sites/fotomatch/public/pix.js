@@ -28,8 +28,17 @@
   .fmpx-passos{margin:8px 0 0;padding:0 0 0 18px;font-size:13px;color:var(--muted,#B7ABA0)}
   .fmpx-passos li{margin:3px 0}
   .fmpx-anel{width:18px;height:18px;border-radius:50%;border:3px solid var(--surface2,#2A2420);border-top-color:var(--warn,#F2B544);display:inline-block;vertical-align:middle;margin-right:8px;animation:fmpxg 1s linear infinite}
-  @keyframes fmpxg{to{transform:rotate(360deg)}}`;
+  @keyframes fmpxg{to{transform:rotate(360deg)}}
+  .fmpx-mp{display:flex;align-items:center;gap:10px;background:#fff;border-radius:12px;padding:9px 12px;margin:0 0 12px;color:#2d3277}
+  .fmpx-mp .mpl{flex:0 0 auto;display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;background:#009EE3;color:#fff;font:800 13px/1 system-ui,sans-serif;letter-spacing:-.5px}
+  .fmpx-mp b{display:block;font:800 14px/1.15 system-ui,sans-serif;color:#2d3277}
+  .fmpx-mp span{display:block;font:500 11.5px/1.3 system-ui,sans-serif;color:#5b5f86}
+  .fmpx-mp .cad{margin-left:auto;font-size:18px}
+  .fmpx-banco{background:var(--surface2,#2A2420);border-radius:10px;padding:9px 12px;margin:10px 0 0;font-size:12.5px;line-height:1.4;color:var(--muted,#B7ABA0)}
+  .fmpx-banco b{color:var(--ink,#F6F0EA)}`;
   const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  const SELO = `<div class="fmpx-mp"><span class="mpl">MP</span><div><b>Pagamento via Mercado Pago</b><span>Pix processado e protegido pelo Mercado Pago</span></div><span class="cad" aria-hidden="true">🔒</span></div>`;
+  const BANCO = `<p class="fmpx-banco">No app do seu banco, o recebedor aparece como <b>Othon Nascimento · Mercado Pago</b>. É a conta da FotoMatch.</p>`;
   const real = (v) => "R$ " + Number(v).toFixed(2).replace(".", ",");
   const cookie = (n) => { const m = document.cookie.match("(^|;)\\s*" + n + "=([^;]+)"); return m ? m[2] : null; };
   const fb = (ev, d) => { try { if (window.fbq) fbq("track", ev, d); } catch { /* */ } };
@@ -49,6 +58,7 @@
   function telaEmail(o) {
     const bumpH = o.bump_oferta ? `<label class="fmpx-bump"><input type="checkbox" id="fmpxBump"><span><b>+ Bio pronta para o seu perfil</b> por só ${real(o.bump_valor || 4.9)}<br><span style="color:var(--muted,#B7ABA0)">3 bios escritas a partir das suas respostas, para copiar e colar.</span></span></label>` : "";
     box().innerHTML = `<div class="fmpx-h"><b>Pagar com Pix</b><button class="fmpx-x" type="button" aria-label="Fechar">×</button></div>
+      ${SELO}
       <p class="fmpx-p">${esc(o.nome)} · libera na hora, direto nesta tela.</p>
       <div class="fmpx-pr"><span>Total</span><b id="fmpxTot">${real(o.valor)}</b></div>
       <label for="fmpxEmail">Seu e-mail (é para onde vai o acesso)</label>
@@ -56,7 +66,7 @@
       ${bumpH}
       <p class="fmpx-err" id="fmpxErr"></p>
       <button class="fmpx-btn" id="fmpxGo" type="button">Gerar Pix · ${real(o.valor)}</button>
-      <p class="fmpx-p" style="text-align:center;margin:10px 0 0;font-size:12px">Pagamento único. Pix via Mercado Pago. Sem mensalidade.</p>`;
+      <p class="fmpx-p" style="text-align:center;margin:10px 0 0;font-size:12px">Pagamento único. Sem mensalidade.</p>`;
     box().querySelector(".fmpx-x").addEventListener("click", fechar);
     const bump = box().querySelector("#fmpxBump");
     if (bump) bump.addEventListener("change", () => { const v = o.valor + (bump.checked ? (o.bump_valor || 4.9) : 0); box().querySelector("#fmpxTot").textContent = real(v); box().querySelector("#fmpxGo").textContent = "Gerar Pix · " + real(v); });
@@ -88,11 +98,13 @@
 
   function telaQr(r, o) {
     box().innerHTML = `<div class="fmpx-h"><b>Pix gerado · ${real(r.valor)}</b><button class="fmpx-x" type="button" aria-label="Fechar">×</button></div>
+      ${SELO}
       <p class="fmpx-p">Pague em qualquer banco. Assim que cair, esta tela libera sozinha.</p>
       <img class="fmpx-qr" alt="QR Code Pix" src="data:image/png;base64,${r.qr64}">
       <button class="fmpx-btn" id="fmpxCp" type="button">Copiar código Pix (copia e cola)</button>
       <textarea class="fmpx-cod" id="fmpxCod" readonly>${esc(r.qr)}</textarea>
       <ol class="fmpx-passos"><li>Abra o app do seu banco → Pix → <b>Pix copia e cola</b></li><li>Cole o código e confirme ${real(r.valor)}</li><li>Volte aqui: libera em segundos</li></ol>
+      ${BANCO}
       <p class="fmpx-st" id="fmpxSt"><span class="fmpx-anel"></span>Aguardando o pagamento…</p>
       <button class="fmpx-btn sec" id="fmpxJa" type="button" style="margin-top:12px">Já paguei, conferir agora</button>`;
     box().querySelector(".fmpx-x").addEventListener("click", fechar);
@@ -120,7 +132,7 @@
     const o = st.o;
     try { const k = "fmpx_px_" + st.ref; if (!sessionStorage.getItem(k)) { fb("Purchase", { content_name: o.pagina || o.tipo, currency: "BRL", value: Number(st.valor) }); sessionStorage.setItem(k, "1"); } } catch { fb("Purchase", { content_name: o.pagina || o.tipo, currency: "BRL", value: Number(st.valor) }); }
     box().innerHTML = `<div class="fmpx-h"><b>Pagamento confirmado ✓</b></div>
-      <p class="fmpx-st ok">Pix recebido. Liberando o seu acesso…</p>
+      ${SELO}<p class="fmpx-st ok">Pix recebido. Liberando o seu acesso…</p>
       <p class="fmpx-p" style="text-align:center">Pedido ${esc(st.ref)}. Também mandamos tudo para o seu e-mail.</p>`;
     setTimeout(() => { try { o.onPago && o.onPago(st.ref); } catch { /* */ } }, 900);
   }
