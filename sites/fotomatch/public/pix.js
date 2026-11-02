@@ -56,7 +56,7 @@
   function fechar() { clearInterval(timer); timer = 0; modal.hidden = true; document.body.style.overflow = ""; }
 
   function telaEmail(o) {
-    const bumpH = o.bump_oferta ? `<label class="fmpx-bump"><input type="checkbox" id="fmpxBump"><span><b>+ Bio pronta para o seu perfil</b> por só ${real(o.bump_valor || 4.9)}<br><span style="color:var(--muted,#B7ABA0)">3 bios escritas a partir das suas respostas, para copiar e colar.</span></span></label>` : "";
+    const bumpH = o.bump_oferta ? `<label class="fmpx-bump"><input type="checkbox" id="fmpxBump"><span><b>+ ${esc(o.bump_titulo || "Bio pronta para o seu perfil")}</b> por só ${real(o.bump_valor || 4.9)}<br><span style="color:var(--muted,#B7ABA0)">${esc(o.bump_desc || "3 bios escritas a partir das suas respostas, para copiar e colar.")}</span></span></label>` : "";
     box().innerHTML = `<div class="fmpx-h"><b>Pagar com Pix</b><button class="fmpx-x" type="button" aria-label="Fechar">×</button></div>
       ${SELO}
       <p class="fmpx-p">${esc(o.nome)} · libera na hora, direto nesta tela.</p>

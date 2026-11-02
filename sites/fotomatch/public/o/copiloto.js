@@ -30,7 +30,8 @@
     fb("InitiateCheckout", { content_name: "Copiloto de Conversa", currency: "BRL", value: 9.9 });
   });
 
-  let objetivo = "continuar";
+  let objetivo = ["continuar", "sair", "seco", "esfriou", "abrir"].includes(q.get("obj")) ? q.get("obj") : "continuar";
+  document.querySelectorAll("#obj .chip").forEach((x) => x.setAttribute("aria-pressed", x.dataset.v === objetivo ? "true" : "false"));
   document.querySelectorAll("#obj .chip").forEach((c) => c.addEventListener("click", () => {
     objetivo = c.dataset.v; document.querySelectorAll("#obj .chip").forEach((x) => x.setAttribute("aria-pressed", x === c ? "true" : "false"));
   }));
@@ -52,15 +53,21 @@
   function desenha(r) {
     const it = (r.interesse || "").toLowerCase(); const t = $("#rInt");
     t.textContent = { frio: "❄️ Frio", morno: "🌤 Morno", quente: "🔥 Quente" }[it] || it; t.className = "tag " + (it === "quente" ? "bom" : it === "morno" ? "morno" : "ruim");
-    $("#rIntP").textContent = r.interesse_porque || ""; $("#rLei").textContent = r.leitura || ""; $("#rErro").textContent = r.erro || "";
+    $("#rIntP").textContent = r.interesse_porque || "";
+    const tm = Math.max(0, Math.min(100, Number(r.termometro) || ({ frio: 25, morno: 55, quente: 85 }[it] || 50)));
+    $("#rTermo").textContent = tm; setTimeout(() => { $("#rTermoBar").style.width = tm + "%"; }, 150);
+    $("#rSinais").innerHTML = (r.sinais || []).map((x) => `<li class="${x.tipo === "-" ? "n" : "p"}"><b>${x.tipo === "-" ? "–" : "+"}</b><span>${esc(x.texto)}</span></li>`).join("");
+    document.querySelectorAll("#rPasso span").forEach((s) => s.classList.toggle("on", s.dataset.p === (r.passo || "vinculo")));
+    $("#cReac").hidden = !r.reacao_provavel; $("#rReac").textContent = r.reacao_provavel || ""; $("#rLei").textContent = r.leitura || ""; $("#rErro").textContent = r.erro || "";
     $("#rEst").textContent = r.estrategia || ""; $("#rEvi").textContent = r.evitar || "";
     $("#rResp").innerHTML = (r.respostas || []).map((x) => x.bloqueada
-      ? `<div class="resp tranca"><p class="r-h">${esc(x.tom)}</p><p class="tx">${FALSO}</p><p class="pq">e o porquê de funcionar com ela</p></div>`
+      ? `<div class="resp lock"><p class="r-h">${esc(x.tom)} · 🔒</p><p class="tx"><span class="ini">${esc(x.inicio || "")}</span></p><p class="pq">Resposta pronta + o porquê de funcionar com ela</p></div>`
       : `<div class="resp"><button class="cp" data-t="${esc(x.texto)}">Copiar</button><p class="r-h">${esc(x.tom)}</p><p class="tx">${esc(x.texto)}</p><p class="pq">${esc(x.porque)}</p></div>`).join("");
     document.querySelectorAll(".cp").forEach((b) => b.addEventListener("click", () => { navigator.clipboard?.writeText(b.dataset.t); b.textContent = "Copiado"; marca("copiou", 4); }));
     if (!r.pago) $("#rResp").insertAdjacentHTML("beforeend", `<a class="btn" href="#pague" id="ctaMeio" style="margin:6px 0 4px">Liberar as outras respostas · R$ 9,90</a>`);
     $("#ctaMeio")?.addEventListener("click", () => marca("cta_meio", 6));
     const prox = $("#cProx"); if (r.proximo_passo) { prox.classList.remove("tranca"); $("#rProx").textContent = r.proximo_passo; } else { prox.classList.add("tranca"); $("#rProx").innerHTML = `<span class="tx" style="display:block">${FALSO}, com o passo seguinte</span>`; }
+    const conv = $("#cConv"); if (r.convite) { conv.classList.remove("tranca"); $("#rConv").textContent = r.convite; } else { $("#rConv").innerHTML = `<span class="ini">${esc(r.convite_inicio || "")}</span><br><span class="mini">🔒 Convite com dia, lugar e plano B, no seu jeito de escrever</span>`; }
     $("#pague").hidden = !!r.pago; $("#selo").textContent = r.pago ? "Ilimitado ativo" : "1ª análise grátis";
     mostra("resultado"); scrollTo(0, 0);
   }
@@ -84,9 +91,9 @@
     } catch { $("#emailMsg").textContent = "Sem conexão. Tente de novo."; }
   });
   if (!DEMO) call({ acao: "acesso", email, sessao: SESSAO }).then((r) => { if (r.ativo) $("#selo").textContent = "Ilimitado ativo"; }).catch(() => {});
-  if (DEMO && q.get("demo") === "res") desenha({ pago: false, interesse: "morno", interesse_porque: "Ela responde rápido e devolve pergunta, mas com mensagens curtas.",
+  if (DEMO && q.get("demo") === "res") desenha({ pago: false, interesse: "morno", termometro: 58, passo: "vinculo", sinais: [{ tipo: "+", texto: "Ela devolveu a pergunta (\"e você?\"): quer continuar falando" }, { tipo: "+", texto: "Respondeu em menos de 10 min nas 3 últimas" }, { tipo: "-", texto: "Mensagens curtas e um \"kkkkk verdade\" sem assunto novo" }], reacao_provavel: "Ela deve rir e te mandar o lugar que ela mais gostou em Salvador.", convite_inicio: "sexta eu vou", interesse_porque: "Ela responde rápido e devolve pergunta, mas com mensagens curtas.",
     leitura: "A conversa está viva, mas virou entrevista: você pergunta, ela responde e devolve.", erro: "Três perguntas seguidas sem contar nada sobre você.",
     estrategia: "Pare de perguntar e conte algo seu ligado ao que ela falou da viagem. Isso dá assunto para ela e abre espaço para um convite.",
     evitar: "Não mande outra pergunta sobre trabalho.",
-    respostas: [{ tom: "Leve", texto: "Salvador sem acarajé não conta, então já vou considerar que você me deve uma indicação", porque: "Usa o assunto dela e cria uma brincadeira entre vocês." }, { tom: "Curiosa", bloqueada: true }, { tom: "Direta", bloqueada: true }] });
+    respostas: [{ tom: "Leve", texto: "salvador sem acarajé não conta, então já vou considerar q vc me deve uma indicação", porque: "Pega o assunto DELA (a viagem) e cria uma dívida brincalhona entre vocês: é o passo 2 do 3V, vínculo. E sai do modo entrevista." }, { tom: "Ousada", bloqueada: true, inicio: "aposto que vc" }, { tom: "Direta", bloqueada: true, inicio: "bora resolver isso" }] });
 })();

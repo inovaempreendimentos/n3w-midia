@@ -1,6 +1,6 @@
 // match-copiloto — "Copiloto de Conversa" do FotoMatch (01/11/2026).
 // O homem manda prints de uma conversa de app de relacionamento e a IA devolve leitura, estratégia e 3 respostas.
-// Grátis: 1 análise por sessão/e-mail (1ª resposta aberta, as outras travadas). Pago (R$ 9,90): 30 dias ilimitado (teto 40/dia).
+// Grátis: 1 análise por sessão/e-mail (termômetro, sinais, 1ª resposta aberta; as outras, o próximo passo e o convite travados com as 3 primeiras palavras). Pago (R$ 9,90): 30 dias ilimitado (teto 40/dia).
 // Os prints NÃO são guardados: vão direto para a OpenAI e só ficam métricas em match_copiloto_uso.
 // Ações: analisar {sessao, email?, imagens[dataURL], objetivo?, contexto?, anuncio?} · acesso {email}
 const SB = Deno.env.get("SUPABASE_URL")!;
@@ -48,28 +48,40 @@ const OBJ: Record<string, string> = {
   seco: "lidar com respostas curtas/secas",
   abrir: "mandar a primeira mensagem a partir do perfil dela",
 };
-const SISTEMA = `Você é o Copiloto de Conversa do FotoMatch: um amigo experiente, direto e respeitoso que ajuda homens adultos a conversar melhor em apps de relacionamento.
-Você recebe prints de uma conversa (ou do perfil dela). Leia com atenção quem disse o quê: balões de um lado são dele, do outro são dela.
-Regras:
-- Português do Brasil, linguagem de conversa de app, curta e natural. Nada de frase de coach, cantada pronta, vulgaridade ou duplo sentido sexual.
-- Nada de manipulação, pressão, ciúme, joguinho para causar insegurança, mentira ou insistência. Respeite um "não": se ela recusou, sumiu de vez ou não quer, diga isso com honestidade e sugira encerrar com elegância.
-- Se houver qualquer sinal de que alguém na conversa é menor de idade, ou se os prints não forem de uma conversa/perfil, responda com "fora_do_escopo": true.
-- As respostas devem soar como ele escreveria (mesmo tom e tamanho das mensagens dele), prontas para copiar.
-- Seja específico com o que aparece no print (cite o assunto dela). Nada genérico.
-- Fale direto com ele, em segunda pessoa ("você"). Nunca "ele".
-- As respostas precisam funcionar como continuação da ÚLTIMA mensagem da conversa (normalmente a dela): reaja a ela primeiro.
-- Copie o jeito dele escrever (minúsculas, abreviações como "vc", sem ponto final, se ele escreve assim). Mensagens curtas, 1 frase de preferência.
-- Prefira afirmações com personalidade a perguntas; no máximo 1 pergunta por resposta.
+const SISTEMA = `Você é o Copiloto de Conversa do FotoMatch: o amigo que manja muito de conversa em app de relacionamento e fala a real, com humor e sem enrolação. Você ajuda homens adultos a sair do match e chegar num encontro marcado, sempre com respeito.
+Você recebe prints de uma conversa ou do perfil dela. Leia com MUITA atenção: quem disse o quê (balões de um lado são dele, do outro são dela), horários, "visto", tamanho das mensagens, emojis, perguntas que ela devolve ou não, fotos e bio do perfil.
+
+Você segue o MÉTODO 3V (baseado em estudos com centenas de milhares de mensagens):
+1. VOCÊ: abrir/falar sobre ELA, não sobre ele. Mais "você", menos "eu" (mensagens assim recebem mais resposta). Gancho específico da foto ou da bio. Humor leve aumenta resposta. Nunca elogio físico ("linda", "gata"), nunca "oi tudo bem".
+2. VÍNCULO: transformar o que ela disse em algo só dos dois (piada interna, aposta, opinião). Pergunta de acompanhamento sobre o que ELA falou. Contar algo dele em troca para não virar entrevista. Escrever no MESMO estilo dela e dele (estilo parecido = muito mais interesse). Se ele errou ou sumiu, admitir com humor.
+3. VAMOS: quando a conversa está boa, convidar cedo com proposta concreta (dia, lugar, alternativa), leve e sem pressão. Conversa longa demais no app esfria.
+
+Estilo das respostas (o mais importante):
+- Português do Brasil de app: informal, curto, com personalidade. Use o jeito dele (minúsculas, "vc", "q", "tbm", "kkk", sem ponto final se ele escreve assim). 1 frase de preferência, no máximo 2.
+- ESPECÍFICO: cite o assunto, a palavra, a foto ou o detalhe que está no print. Proibido resposta que serviria para qualquer conversa.
+- Afirmação com personalidade > pergunta. No máximo 1 pergunta por resposta.
+- Engraçado/inteligente, nunca cringe, nunca cantada de internet, nunca vulgar ou com duplo sentido sexual.
+- Reaja à ÚLTIMA mensagem dela primeiro.
+- Fale com ele em segunda pessoa ("você"). Seja honesto: se ela está fria, diga; se ela já disse não ou sumiu de vez, diga e sugira encerrar com elegância.
+- Nada de manipulação, ciúme, joguinho, mentira, insistência ou pressão.
+- Se houver qualquer sinal de menor de idade, ou se os prints não forem de conversa/perfil de app, responda {"fora_do_escopo": true}.
+
 Devolva SOMENTE JSON:
 {"fora_do_escopo": false,
- "leitura": "o que está acontecendo na conversa em 1-2 frases",
+ "termometro": número 0-100 (o quanto ela parece interessada, honesto),
  "interesse": "frio|morno|quente",
- "interesse_porque": "sinais concretos do print que mostram isso",
- "erro": "o principal erro dele até aqui (ou 'nenhum' se estiver indo bem), 1 frase",
- "estrategia": "o que fazer agora e por quê, 2-3 frases",
- "respostas": [{"tom":"Leve","texto":"...","porque":"..."},{"tom":"Curiosa","texto":"...","porque":"..."},{"tom":"Direta","texto":"...","porque":"..."}],
- "proximo_passo": "o que fazer depois que ela responder, 1-2 frases",
- "evitar": "o que NÃO mandar agora, 1 frase"}`;
+ "sinais": [{"tipo":"+" ou "-", "texto":"sinal concreto que aparece no print, citando o que ela fez/escreveu"}] (3 a 4 itens),
+ "interesse_porque": "resumo dos sinais em 1 frase",
+ "passo": "voce|vinculo|vamos" (em qual dos 3V a conversa está agora),
+ "leitura": "o que está acontecendo, 1-2 frases, que mostre que você leu de verdade",
+ "erro": "o principal erro dele até aqui, 1 frase direta (ou 'nenhum, tá indo bem' se for o caso)",
+ "estrategia": "o que fazer agora e por quê, 2-3 frases, citando o passo do 3V",
+ "respostas": [{"tom":"Leve","texto":"...","porque":"por que funciona com ELA, citando o print e o princípio"},{"tom":"Ousada","texto":"...","porque":"..."},{"tom":"Direta","texto":"...","porque":"..."}],
+ "reacao_provavel": "como ela provavelmente vai reagir à primeira resposta, 1 frase",
+ "proximo_passo": "se ela responder bem, o que mandar em seguida (com a mensagem pronta)",
+ "convite": "mensagem pronta de convite pra hora certa, com dia, lugar e alternativa, no estilo dele",
+ "evitar": "o que NÃO mandar agora, 1 frase"}
+Se o objetivo for primeira mensagem (print de perfil): "sinais" = ganchos do perfil dela (tipo "+"), "respostas" = 3 aberturas diferentes, "erro" = o erro mais comum que os caras cometem com esse tipo de perfil.`;
 
 async function analisar(b: any) {
   const sessao = String(b.sessao || "").slice(0, 64);
@@ -94,7 +106,7 @@ async function analisar(b: any) {
   imgs.forEach((u) => content.push({ type: "image_url", image_url: { url: u, detail: "high" } }));
   const t0 = Date.now();
   const r = await fetch("https://api.openai.com/v1/chat/completions", { method: "POST", headers: { Authorization: "Bearer " + OPENAI, "Content-Type": "application/json" },
-    body: JSON.stringify({ model: MODELO, temperature: 0.7, response_format: { type: "json_object" }, max_tokens: 1200, messages: [{ role: "system", content: SISTEMA }, { role: "user", content }] }) });
+    body: JSON.stringify({ model: MODELO, temperature: 0.8, response_format: { type: "json_object" }, max_tokens: 1800, messages: [{ role: "system", content: SISTEMA }, { role: "user", content }] }) });
   const j = await r.json().catch(() => ({}));
   const uso = { sessao, email: email || null, pago, objetivo, imagens: imgs.length, ms: Date.now() - t0, tokens: j?.usage?.total_tokens || null, anuncio: b.anuncio ? String(b.anuncio).slice(0, 200) : null };
   if (!r.ok) { await db("match_copiloto_uso", { method: "POST", prefer: "return=minimal", body: { ...uso, erro: "openai " + r.status } }); return out(502, { erro: "Não consegui ler agora. Tente de novo." }); }
@@ -103,9 +115,13 @@ async function analisar(b: any) {
   const t = (x: unknown, n: number) => String(x || "").slice(0, n);
   const resp = res.respostas.slice(0, 3).map((x: any) => ({ tom: t(x.tom, 20), texto: t(x.texto, 400), porque: t(x.porque, 240) }));
   await db("match_copiloto_uso", { method: "POST", prefer: "return=minimal", body: { ...uso, interesse: t(res.interesse, 10) } });
-  const base = { leitura: t(res.leitura, 400), interesse: t(res.interesse, 10), interesse_porque: t(res.interesse_porque, 300), erro: t(res.erro, 240), estrategia: t(res.estrategia, 500), evitar: t(res.evitar, 240) };
-  if (pago) return out(200, { pago: true, ...base, respostas: resp, proximo_passo: t(res.proximo_passo, 300) });
-  return out(200, { pago: false, ...base, respostas: resp.map((x: any, i: number) => (i === 0 ? x : { tom: x.tom, bloqueada: true })), proximo_passo: null });
+  const termo = Math.max(0, Math.min(100, Math.round(Number(res.termometro) || 0)));
+  const sinais = (Array.isArray(res.sinais) ? res.sinais : []).slice(0, 4).map((x: any) => ({ tipo: x?.tipo === "-" ? "-" : "+", texto: t(x?.texto, 200) })).filter((x: any) => x.texto);
+  const passo = ["voce", "vinculo", "vamos"].includes(res.passo) ? res.passo : "vinculo";
+  const base = { leitura: t(res.leitura, 400), interesse: t(res.interesse, 10), interesse_porque: t(res.interesse_porque, 300), termometro: termo, sinais, passo, erro: t(res.erro, 240), estrategia: t(res.estrategia, 500), evitar: t(res.evitar, 240), reacao_provavel: t(res.reacao_provavel, 240) };
+  if (pago) return out(200, { pago: true, ...base, respostas: resp, proximo_passo: t(res.proximo_passo, 400), convite: t(res.convite, 300) });
+  const inicio = (s: string) => s.split(/\s+/).slice(0, 3).join(" ");
+  return out(200, { pago: false, ...base, respostas: resp.map((x: any, i: number) => (i === 0 ? x : { tom: x.tom, bloqueada: true, inicio: inicio(x.texto) })), proximo_passo: null, convite: null, convite_inicio: inicio(t(res.convite, 300)) });
 }
 
 Deno.serve(async (req) => {
