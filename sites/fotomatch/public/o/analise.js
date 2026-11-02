@@ -69,7 +69,18 @@
     const resultado = (r) => {
       rid = r.rid; if (rid) ls.set("fo_rid_" + TIPO, rid);
       $("#res").innerHTML = R[TIPO](r.previa, false) + `<div class="card" style="border-color:var(--warn);text-align:center"><p class="r-h" style="color:var(--warn)">Análise completa pronta</p><p style="margin:0 0 12px">A outra parte da sua análise já foi feita. Libere agora e veja tudo nesta tela.</p><a class="btn" data-cta>Liberar tudo · R$ 9,90</a><p class="mini" style="margin:8px 0 0">Pagamento único. Pix ou cartão. Libera na hora.</p></div>` + TRANCAS[TIPO](r.trancado || {});
-      document.querySelectorAll("[data-cta]").forEach((a) => { a.href = ckUrl(); a.addEventListener("click", () => { marca("checkout", 9); fb("InitiateCheckout", { content_name: PAGINA, currency: "BRL", value: 9.9 }); }); });
+      document.querySelectorAll("[data-cta]").forEach((a) => { a.href = ckUrl(); a.addEventListener("click", (e) => {
+        marca("checkout", 9);
+        if (window.FMPix && q.get("pg") !== "payt" && rid) { // Pix na página (02/11)
+          e.preventDefault(); marca("pix", 9);
+          const OK = TIPO === "perfil" ? "ok-prints.html" : "ok-glowup.html";
+          FMPix.abrir({ tipo: TIPO, rid, email: ls.get("fm_email") || "", utm, pagina: PAGINA, nome: TIPO === "perfil" ? "Análise completa do seu perfil" : "Glow up completo", valor: 9.9,
+            lembra: (x) => ls.set("fm_email", x),
+            onPago: () => { marca("pago", 10); try { sessionStorage.setItem("fo_px_/o/" + OK, "1"); } catch { /* */ } location.href = OK + "?rid=" + rid; },
+            fallback: () => { fb("InitiateCheckout", { content_name: PAGINA, currency: "BRL", value: 9.9 }); location.href = ckUrl(); } });
+          return;
+        }
+        fb("InitiateCheckout", { content_name: PAGINA, currency: "BRL", value: 9.9 }); }); });
       show("resultado"); $("#fixo").hidden = false; scrollTo(0, 0); marca("resultado", 3); fb("Lead", { content_name: PAGINA });
     };
     $("#vai").addEventListener("click", async () => {

@@ -17,7 +17,18 @@
   const CK = document.body.dataset.checkout;
   const cta = $("#cta");
   if (CK) { const u = new URL(CK); Object.entries(utm).forEach(([k, v]) => u.searchParams.set(k, v)); u.searchParams.set("src", SESSAO); cta.href = u.toString(); } else cta.href = "#";
-  cta.addEventListener("click", () => { marca("checkout", 9); fb("InitiateCheckout", { content_name: "Copiloto de Conversa", currency: "BRL", value: 9.9 }); });
+  cta.addEventListener("click", (e) => {
+    marca("checkout", 9);
+    if (window.FMPix && q.get("pg") !== "payt") { // Pix na página (02/11); sem Mercado Pago cai no Payt
+      e.preventDefault(); marca("pix", 9);
+      FMPix.abrir({ tipo: "copiloto", sessao: SESSAO, email: email || ls.get("fm_email") || "", utm, pagina: "COPILOTO", nome: "Copiloto de Conversa · 30 dias ilimitado", valor: 9.9,
+        lembra: (x) => { email = x; ls.set("cp_e", x); ls.set("fm_email", x); },
+        onPago: () => { marca("pago", 10); try { sessionStorage.setItem("fo_px_/o/ok-copiloto.html", "1"); } catch { /* */ } location.href = "ok-copiloto.html"; },
+        fallback: () => { fb("InitiateCheckout", { content_name: "Copiloto de Conversa", currency: "BRL", value: 9.9 }); location.href = cta.href; } });
+      return;
+    }
+    fb("InitiateCheckout", { content_name: "Copiloto de Conversa", currency: "BRL", value: 9.9 });
+  });
 
   let objetivo = "continuar";
   document.querySelectorAll("#obj .chip").forEach((c) => c.addEventListener("click", () => {

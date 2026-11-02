@@ -28,10 +28,10 @@ const limpaEmail = (e: unknown) => { const s = String(e || "").trim().toLowerCas
 // Preços por tipo e faixa (A/B de preço: faixa a/b/c). Bump da bio soma +4,90.
 const PRECO: Record<string, Record<string, number>> = {
   fotos: { a: 9.9, b: 19.9, c: 29.9 }, kit: { a: 19.9, b: 29.9 },
-  perfil: { a: 9.9 }, glowup: { a: 9.9 }, copiloto: { a: 9.9 },
+  perfil: { a: 9.9 }, glowup: { a: 9.9 }, copiloto: { a: 9.9 }, mensagens: { a: 9.9 },
 };
 const BUMP = 4.9;
-const DESCR: Record<string, string> = { fotos: "FotoMatch: 15 fotos de perfil", kit: "FotoMatch: Kit Match (15 fotos + Copiloto 30 dias)", perfil: "FotoMatch: análise completa do perfil", glowup: "FotoMatch: plano de estilo completo", copiloto: "FotoMatch: Copiloto de Conversa 30 dias" };
+const DESCR: Record<string, string> = { fotos: "FotoMatch: 15 fotos de perfil", kit: "FotoMatch: Kit Match (15 fotos + Copiloto 30 dias)", perfil: "FotoMatch: análise completa do perfil", glowup: "FotoMatch: plano de estilo completo", copiloto: "FotoMatch: Copiloto de Conversa 30 dias", mensagens: "FotoMatch: Kit O Que Mandar (35 mensagens)" };
 
 async function criar(b: any, req: Request) {
   if (!MP) return out(503, { erro: "indisponivel" });
@@ -39,7 +39,7 @@ async function criar(b: any, req: Request) {
   const faixa = PRECO[tipo][String(b.faixa || "a")] ? String(b.faixa || "a") : "a";
   const bump = !!b.bump && (tipo === "fotos" || tipo === "kit");
   const valor = +(PRECO[tipo][faixa] + (bump ? BUMP : 0)).toFixed(2);
-  const email = limpaEmail(b.email); if (!email) return out(400, { erro: "Digite um e-mail válido: é para onde vão as fotos." });
+  const email = limpaEmail(b.email); if (!email) return out(400, { erro: "Digite um e-mail válido: é para onde vai o seu acesso." });
   let lead_id: string | null = null, rid: string | null = null, sessao: string | null = null;
   if (tipo === "fotos" || tipo === "kit") {
     if (!UUID.test(String(b.lead_id || ""))) return out(400, { erro: "lead" });
@@ -49,7 +49,7 @@ async function criar(b: any, req: Request) {
   } else if (tipo === "perfil" || tipo === "glowup") {
     if (!UUID.test(String(b.rid || ""))) return out(400, { erro: "rid" });
     rid = String(b.rid);
-  } else if (tipo === "copiloto") {
+  } else if (tipo === "copiloto" || tipo === "mensagens") {
     if (!/^[a-f0-9]{8,64}$/.test(String(b.sessao || ""))) return out(400, { erro: "sessao" });
     sessao = String(b.sessao);
   }
@@ -82,7 +82,7 @@ async function confirma(o: any) {
   const u = o.utm || {};
   if (o.lead_id) await db(`match_leads?id=eq.${o.lead_id}`, { method: "PATCH", prefer: "return=minimal", body: { status: "pago", email: o.email } });
   if (u.rid) await db(`match_oferta_res?id=eq.${u.rid}`, { method: "PATCH", prefer: "return=minimal", body: { liberado: true } });
-  if (u.sessao_cop || o.pacote === "kit") {
+  if ((u.sessao_cop && o.pacote === "copiloto") || o.pacote === "kit") {
     await db("match_copiloto_acesso", { method: "POST", prefer: "resolution=merge-duplicates,return=minimal", body: { email: o.email, ate: new Date(Date.now() + 30 * 864e5).toISOString(), origem: "mp-" + o.pacote } });
   }
   // vendas: mesma tabela que a Payt alimenta, para o painel somar tudo

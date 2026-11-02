@@ -41,7 +41,7 @@ const EVENTO_FN = "https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/match-e
 const ACEITE_FN = "https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/match-aceite";
 
 /* ---------- registro de telas (sem dado pessoal): onde as pessoas desistem ---------- */
-const ORDEM_TELA = Object.assign(Object.fromEntries(SEQ.map((t, i) => [t, i])), { analisando: 17, contato: 18, resultado: 19, pendente: 19, oferta: 20, checkout: 21 });
+const ORDEM_TELA = Object.assign(Object.fromEntries(SEQ.map((t, i) => [t, i])), { analisando: 17, contato: 18, resultado: 19, pendente: 19, oferta: 20, checkout: 21, pix: 22, pix_indisponivel: 22, pago: 23 });
 // Mesma página para todos os criativos (decisão do Othon, 31/10 18h47): todos entram direto na 1ª pergunta; ?entrada=topo mostra a versão antiga.
 const ENTRADA_DIRETA = new URLSearchParams(location.search).get("entrada") !== "topo";
 document.body.classList.toggle("entrada-direta", ENTRADA_DIRETA);
@@ -325,12 +325,28 @@ function iniciaCron() {
 // Barra fixa leva direto ao checkout (o botão do meio só rola até a oferta).
 $("#ctaFixo").addEventListener("click", () => $("#ctaCheckout").click());
 $$("[data-oferta]").forEach((b) => b.addEventListener("click", () => { marca("oferta"); $("#oferta").scrollIntoView({ behavior: "smooth", block: "start" }); }));
+// Pix na página (02/11): o botão abre o Pix do Mercado Pago aqui mesmo; sem Mercado Pago (ou ?pg=payt), cai no checkout Payt.
+const PIX_NA_PAGINA = !!window.FMPix && new URLSearchParams(location.search).get("pg") !== "payt";
+function abreCheckoutPayt() {
+  try { localStorage.setItem("fm_preco", String(PRECO)); if (estado.lead && estado.lead.id) localStorage.setItem("fm_lead_id", estado.lead.id); } catch { /* sem storage */ }
+  try { if (window.fbq) fbq("track", "InitiateCheckout", { content_name: "fotomatch_15_fotos", currency: "BRL", value: PRECO }); } catch { /* */ }
+  location.href = linkCheckout();
+}
 $("#ctaCheckout").addEventListener("click", (e) => {
   if (!CHECKOUT_URL) { e.preventDefault(); return; }
   e.currentTarget.href = linkCheckout(); // o lead pode ter sido criado depois de montar o resultado
+  marca("checkout");
+  if (PIX_NA_PAGINA && estado.lead && estado.lead.id) {
+    e.preventDefault(); marca("pix");
+    let em = ""; try { em = ($("#email") && $("#email").value.trim()) || localStorage.getItem("fm_email") || ""; } catch { /* */ }
+    FMPix.abrir({ tipo: "fotos", lead_id: estado.lead.id, faixa: "a", bump_oferta: true, bump_valor: 4.9, email: em, utm, pagina: CURTO ? "CURTO" : "A", nome: "15 fotos de perfil com o seu rosto", valor: PRECO,
+      lembra: (x) => { try { localStorage.setItem("fm_email", x); } catch { /* */ } },
+      onPago: () => { marca("pago"); try { sessionStorage.setItem("fm_px_purchase", "1"); } catch { /* */ } location.href = "obrigado.html"; }, // Purchase já disparou no modal; obrigado.html não repete
+      fallback: () => { marca("pix_indisponivel"); abreCheckoutPayt(); } });
+    return;
+  }
   // Pixel N3w FotoMatch: InitiateCheckout ao abrir o checkout; guarda o preço para o Purchase da obrigado.html.
   try { localStorage.setItem("fm_preco", String(PRECO)); if (estado.lead && estado.lead.id) localStorage.setItem("fm_lead_id", estado.lead.id); } catch { /* sem storage */ }
-  marca("checkout");
   try { if (window.fbq) fbq("track", "InitiateCheckout", { content_name: "fotomatch_15_fotos", currency: "BRL", value: PRECO }); } catch { /* */ }
 });
 
