@@ -73,11 +73,11 @@
   }
 
   $("#vai").addEventListener("click", async () => {
-    $("#erro").textContent = ""; mostra("carregando"); marca("analisou", 2);
+    $("#erro").textContent = ""; mostra("carregando"); marca("analisou", 2); { const ps = ["Lendo quem disse o quê…", "Medindo o interesse dela…", "Achando o erro que travou a conversa…", "Testando 8 respostas no estilo de vocês…", "Escolhendo as 3 melhores…", "Montando o convite pro encontro…"]; let k = 0; clearInterval(window._lt); window._lt = setInterval(() => { const el = $("#loadTxt"); if (el && k < ps.length - 1) el.textContent = ps[++k]; else clearInterval(window._lt); }, 5000); $("#loadTxt") && ($("#loadTxt").textContent = ps[0]); }
     try {
       const r = await call({ acao: "analisar", sessao: SESSAO, email, imagens: imgs, objetivo, contexto: $("#ctx").value, anuncio: utm.utm_content || null });
       if (r.bloqueado) { mostra("envio"); $("#pague").hidden = false; $("#pague").scrollIntoView({ behavior: "smooth" }); marca("paywall", 5); return; }
-      if (r.fora_do_escopo) { mostra("envio"); $("#erro").textContent = "Não consegui ler uma conversa nesses prints. Mande o print da conversa no app."; return; }
+      if (r.fora_do_escopo) { mostra("envio"); $("#erro").textContent = "Não consegui ler uma conversa nesses prints. Mande o print da conversa (app, WhatsApp ou Instagram) ou do perfil dela."; return; }
       if (r.erro) { mostra("envio"); $("#erro").textContent = r.erro; return; }
       desenha(r); marca("resultado", 3); if (!r.pago) { marca("paywall", 5); fb("Lead", { content_name: "Copiloto" }); }
     } catch { mostra("envio"); $("#erro").textContent = "Sem conexão. Tente de novo."; }
