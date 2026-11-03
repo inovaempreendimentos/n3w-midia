@@ -1,0 +1,80 @@
+p01_selfie 200 2024227
+p01_bracos 200 2287143
+p01_mesa 200 2075825
+p01_palestra 200 2318678
+p01_varanda 200 2058711
+p01_notebook 200 1925687
+p01_corredor 200 2232094
+p02_selfie 200 2456314
+p02_bracos 200 2672982
+p02_mesa 200 2229905
+p02_palestra 200 2208916
+p02_varanda 200 2438471
+p02_notebook 200 2320473
+p02_corredor 200 2232741
+p03_selfie 200 2871224
+p03_bracos 200 2095761
+p03_mesa 200 2089066
+curl: (22) The requested URL returned error: 400
+p03_palestra 400 0
+p03_varanda 200 2302719
+p03_notebook 200 2218768
+curl: (22) The requested URL returned error: 400
+p03_corredor 400 0
+p04_selfie 200 2790415
+curl: (22) The requested URL returned error: 400
+p04_bracos 400 0
+p04_mesa 200 2365835
+p04_palestra 200 2640302
+p04_varanda 200 2508456
+curl: (22) The requested URL returned error: 400
+p04_notebook 400 0
+p04_corredor 200 2154006
+p05_selfie 200 2331408
+curl: (22) The requested URL returned error: 400
+p05_bracos 400 0
+curl: (22) The requested URL returned error: 400
+p05_mesa 400 0
+curl: (22) The requested URL returned error: 400
+p05_palestra 400 0
+curl: (22) The requested URL returned error: 400
+p05_varanda 400 0
+curl: (22) The requested URL returned error: 400
+p05_notebook 400 0
+curl: (22) The requested URL returned error: 400
+p05_corredor 400 0
+p06_selfie 200 2796907
+p06_bracos 200 2117709
+p06_mesa 200 2185420
+p06_palestra 200 2560225
+p06_varanda 200 2430482
+p06_notebook 200 2370226
+p06_corredor 200 1899221
+p07_selfie 200 2272022
+p07_bracos 200 2281463
+p07_mesa 200 2107880
+p07_palestra 200 2343511
+p07_varanda 200 2105622
+p07_notebook 200 2140634
+p07_corredor 200 2042334
+p08_selfie 200 2766711
+p08_bracos 200 2413141
+p08_mesa 200 2326891
+p08_palestra 200 2274614
+p08_varanda 200 2540358
+p08_notebook 200 2331250
+p08_corredor 200 1984237
+p09_selfie 200 2622622
+p09_bracos 200 2181085
+p09_mesa 200 2069055
+p09_palestra 200 2321012
+p09_varanda 200 2011010
+p09_notebook 200 2018370
+p09_corredor 200 2129399
+p10_selfie 200 2154058
+p10_bracos 200 2182728
+p10_mesa 200 2009380
+p10_palestra 200 2294762
+p10_varanda 200 2187028
+p10_notebook 200 2133342
+p10_corredor 200 2023505
