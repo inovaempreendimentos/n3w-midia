@@ -34,9 +34,9 @@ const F = {
     ${[0,1,2,3,4].map((i,k)=>im(i, 420+k*110, 120+Math.abs(k-2)*40, 210, 420, `transform:rotate(${(k-2)*9}deg);z-index:${k===2?3:1};border-radius:22px`)).join('')}
     <div class="lbl" style="right:70px;top:620px;font-size:26px">15 fotos prontas ✓</div></div>${CTA}`,
   // F03 · ÓRBITA: selfie no centro, 6 fotos em círculo ao redor.
-  F03_orbita: `${H}<div class="mid"><div style="position:absolute;left:150px;top:30px;width:780px;height:780px;border-radius:50%;border:3px dashed #39415a"></div>
-    ${sf(430, 320, 220, 220, 0, 'selfie')}
-    ${[0,1,2,3,4,5].map((i)=>{const a=-90+i*60,r=360,cx=540,cy=430,x=cx+r*Math.cos(a*Math.PI/180)-95,y=cy+r*Math.sin(a*Math.PI/180)-130;return im(i,x,y,190,260,'border-radius:28px')}).join('')}</div>${CTA}`,
+  F03_orbita: `${H}<div class="mid"><div style="position:absolute;left:220px;top:130px;width:640px;height:640px;border-radius:50%;border:3px dashed #39415a"></div>
+    ${sf(440, 350, 200, 200, 0, "selfie")}
+    ${[0,1,2,3,4,5].map((i)=>{const r=320,cy=450,w=170,h=220,a=-90+i*60,cx=540,x=cx+r*Math.cos(a*Math.PI/180)-w/2,y=cy+r*Math.sin(a*Math.PI/180)-h/2;return im(i,x,y,w,h,'border-radius:28px')}).join('')}</div>${CTA}`,
   // F04 · NÚMERO GIGANTE: um "15" enorme feito de fotos (máscara), selfie pequena no canto.
   F04_numero: `${H}<div class="mid"><div style="position:absolute;left:0;right:0;top:20px;text-align:center;font-size:600px;font-weight:800;line-height:1;letter-spacing:-30px;background:url(${IM[3]}) center/cover;-webkit-background-clip:text;color:transparent">15</div>
     ${sf(70, 560, 200, 280, -8)}${seta(270, 650, 0, 110)}
