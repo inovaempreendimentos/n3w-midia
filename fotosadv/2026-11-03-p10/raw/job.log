@@ -15,34 +15,24 @@ p02_corredor 200 2232741
 p03_selfie 200 2871224
 p03_bracos 200 2095761
 p03_mesa 200 2089066
-curl: (22) The requested URL returned error: 400
-p03_palestra 400 0
+p03_palestra 200 2296862
 p03_varanda 200 2302719
 p03_notebook 200 2218768
-curl: (22) The requested URL returned error: 400
-p03_corredor 400 0
+p03_corredor 200 2110008
 p04_selfie 200 2790415
-curl: (22) The requested URL returned error: 400
-p04_bracos 400 0
+p04_bracos 200 2407620
 p04_mesa 200 2365835
 p04_palestra 200 2640302
 p04_varanda 200 2508456
-curl: (22) The requested URL returned error: 400
-p04_notebook 400 0
+p04_notebook 200 2434140
 p04_corredor 200 2154006
 p05_selfie 200 2331408
-curl: (22) The requested URL returned error: 400
-p05_bracos 400 0
-curl: (22) The requested URL returned error: 400
-p05_mesa 400 0
-curl: (22) The requested URL returned error: 400
-p05_palestra 400 0
-curl: (22) The requested URL returned error: 400
-p05_varanda 400 0
-curl: (22) The requested URL returned error: 400
-p05_notebook 400 0
-curl: (22) The requested URL returned error: 400
-p05_corredor 400 0
+p05_bracos 200 2199466
+p05_mesa 200 2111241
+p05_palestra 200 2367801
+p05_varanda 200 1993570
+p05_notebook 200 2047708
+p05_corredor 200 2070866
 p06_selfie 200 2796907
 p06_bracos 200 2117709
 p06_mesa 200 2185420
