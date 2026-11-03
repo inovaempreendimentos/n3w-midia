@@ -25,7 +25,6 @@ p{margin:0 0 14px}b.hl{color:#fff;background:linear-gradient(transparent 60%,#fd
 
 <span class="k">Por que não está funcionando</span>
 <h1>O problema não é você. É um ponto cego que todo homem tem quando monta o próprio perfil.</h1>
-<div class="cr"><img id="img" alt=""></div>
 
 <p>Você abre o app, passa umas fotos, manda umas mensagens. Pouca curtida, conversa que morre no segundo dia, "visto" sem resposta. Aí vem a conclusão de sempre: <b class="hl">"o problema sou eu"</b>.</p>
 <p>Não é. A ciência já explicou o que acontece, e quase ninguém conta.</p>
@@ -42,8 +41,12 @@ p{margin:0 0 14px}b.hl{color:#fff;background:linear-gradient(transparent 60%,#fd
 <p>Você monta o perfil e escreve as mensagens olhando de dentro: escolhe a foto em que <i>você</i> se acha bem, manda a frase que <i>você</i> acha legal. Ela vê de fora, em 0,1 segundo, sem o seu filtro. É por isso que a dor continua mesmo quando você "se esforça mais":</p>
 <ol><li>Mais fotos do mesmo tipo = o mesmo erro, repetido.</li><li>Mais mensagens no mesmo estilo = o mesmo "visto", repetido.</li><li>Plano pago = mais gente vendo o mesmo ponto cego.</li></ol></div>
 
+<h2>Por que se esforçar mais não resolve</h2>
+<p>Se o filtro está errado, tudo que passa por ele sai errado. Você troca a foto por outra que <i>você</i> gosta. Reescreve a mensagem do jeito que <i>você</i> acha melhor. Muda a ferramenta, mas o filtro continua o mesmo. É como tentar ver a própria nuca sem espelho: não é falta de esforço, é falta de ângulo.</p>
+<p>Repare: os caras que "dão sorte" no app raramente escolheram as próprias fotos sozinhos. Foi a amiga que tirou, a irmã que escolheu, o colega que disse "essa não". <b class="hl">Alguém de fora corrigiu o ponto cego por eles.</b></p>
 <h2>A saída: um olhar de fora, em segundos</h2>
 <p>Se o problema é que você não consegue se ver de fora, a solução é alguém, ou algo, que veja. É isso que a FotoMatch faz: uma IA treinada para olhar seu perfil e suas conversas <b class="hl">como ela olha</b>, e te entregar a correção pronta.</p>
+<div class="mec"><span class="k">Como a correção acontece</span><h3>Olhar de fora → corrigir → entregar pronto</h3><ol><li><b>Olhar de fora:</b> a IA analisa o que você manda (selfies, print do perfil ou da conversa) sem o seu filtro, do jeito que uma desconhecida veria em 0,1 segundo.</li><li><b>Corrigir o ponto cego:</b> ela identifica exatamente o que afasta (luz, ângulo, cenário, a frase, o momento) e o que atrai.</li><li><b>Entregar pronto:</b> você recebe o resultado para usar hoje, sem precisar saber de foto, de conversa ou de psicologia.</li></ol></div>
 
 <div class="of"><span class="k" id="ofk">Para você começar agora</span><h3 id="ofn">…</h3><ul id="ofl"></ul>
 <div class="preco"><b>R$ 9,90</b><span>pagamento único</span></div>
@@ -60,12 +63,12 @@ const ls={get:k=>{try{return localStorage.getItem(k)}catch{return null}},set:(k,
 const S=ls.get('t30_s')||(()=>{const v=Array.from(crypto.getRandomValues(new Uint8Array(10)),x=>x.toString(16).padStart(2,'0')).join('');ls.set('t30_s',v);return v})();
 const marca=(tela,ordem)=>{if(DEMO)return;fetch(EV,{method:'POST',headers:{'Content-Type':'text/plain'},keepalive:true,body:JSON.stringify({sessao:S,pagina:'T30',tela,ordem,anuncio:'T-'+c})}).catch(()=>{})};
 const P={
-fotos:{n:'15 fotos de perfil com o seu rosto',l:['Você manda 3 selfies comuns','A IA cria 15 fotos nos cenários que mais recebem curtida: viagem, café, rua, noite','Mesmo rosto em todas, luz de verdade, sem cara de IA','A ordem certa das fotos, escolhida de fora'],b:'Quero minhas 15 fotos',d:'../index.html?f=curto'},
-cop:{n:'Copiloto de Conversa · 30 dias',l:['Manda o print de qualquer conversa','A IA mede o interesse dela de 0 a 100 e mostra onde travou','3 respostas prontas no seu jeito de escrever','O convite pronto, na hora certa'],b:'Quero o Copiloto',d:'../o/copiloto.html'},
-abr:{n:'Aberturas pelo perfil dela',l:['Manda o print do perfil dela','A IA acha os ganchos nas fotos e na bio','3 primeiras mensagens que ninguém mais mandou','Copiar e colar'],b:'Quero minhas aberturas',d:'../o/copiloto.html?obj=abrir'},
-nota:{n:'Raio-X do seu perfil',l:['Manda o print do seu perfil','Nota de cada foto: qual afasta e qual atrai','A ordem certa das fotos','Sua bio reescrita'],b:'Quero o Raio-X',d:'../o/prints.html'}};
+fotos:{n:'15 fotos de perfil com o seu rosto',l:['Você manda 3 selfies comuns','A IA cria 15 fotos nos cenários que mais recebem curtida: viagem, café, rua, noite','Mesmo rosto em todas, luz de verdade, sem cara de IA','A ordem certa das fotos, escolhida de fora'],b:'Gerar minhas 15 fotos estratégicas',d:'../index.html?f=curto'},
+cop:{n:'Copiloto de Conversa · 30 dias',l:['Manda o print de qualquer conversa','A IA mede o interesse dela de 0 a 100 e mostra onde travou','3 respostas prontas no seu jeito de escrever','O convite pronto, na hora certa'],b:'Gerar a resposta certa',d:'../o/copiloto.html'},
+abr:{n:'Aberturas pelo perfil dela',l:['Manda o print do perfil dela','A IA acha os ganchos nas fotos e na bio','3 primeiras mensagens que ninguém mais mandou','Copiar e colar'],b:'Gerar minhas 3 aberturas',d:'../o/copiloto.html?obj=abrir'},
+nota:{n:'Raio-X do seu perfil',l:['Manda o print do seu perfil','Nota de cada foto: qual afasta e qual atrai','A ordem certa das fotos','Sua bio reescrita'],b:'Ver o raio-X do meu perfil',d:'../o/prints.html'}};
 let of=q.get('p');if(!P[of]){try{const D=await fetch('c.json?v=2').then(r=>r.json());of=(D[c]||{}).of}catch{}}if(!P[of])of='fotos';
-const p=P[of];document.getElementById('img').src='../ad/t30/'+c+'.jpg';document.getElementById('ofn').textContent=p.n;
+const p=P[of];document.getElementById('ofn').textContent=p.n;
 const ul=document.getElementById('ofl');p.l.forEach(t=>{const li=document.createElement('li');li.textContent=t;ul.appendChild(li)});
 const u=new URL(p.d,location.href);['utm_source','utm_medium','utm_campaign','utm_term','fbclid'].forEach(k=>q.get(k)&&u.searchParams.set(k,q.get(k)));u.searchParams.set('utm_content','T-'+c);
 const btn=document.getElementById('btn');btn.textContent=p.b+' · R$ 9,90';btn.href=u.toString();
