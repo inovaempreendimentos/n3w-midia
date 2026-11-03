@@ -22,6 +22,9 @@
   .fmpx-btn.sec{background:var(--surface2,#2A2420);color:var(--ink,#F6F0EA);border:1px solid var(--line,#3A322C);text-transform:none;font-weight:700}
   .fmpx-qr{display:block;width:220px;height:220px;margin:8px auto;border-radius:12px;background:#fff;padding:8px;box-sizing:border-box}
   .fmpx-cod{width:100%;box-sizing:border-box;border:1px solid var(--line,#3A322C);background:var(--bg,#14110F);color:var(--muted,#B7ABA0);border-radius:10px;padding:10px;font:12px/1.4 monospace;height:64px;resize:none}
+  .fmpx-cron{display:flex;align-items:center;justify-content:space-between;gap:10px;background:#3A1F1C;border:1px solid #6b2a24;border-radius:14px;padding:10px 14px;margin:0 0 12px}
+  .fmpx-cron span{font-size:13.5px;line-height:1.35;color:#F3D9D4}.fmpx-cron b{font:800 26px/1 ui-monospace,Menlo,monospace;color:#FF6B5E;letter-spacing:.02em}
+  .fmpx-cron.fim{background:#2a2522;border-color:#3a332f}.fmpx-cron.fim b{color:#B7ABA0}
   .fmpx-st{text-align:center;margin:12px 0 0;font-size:14px;color:var(--muted,#B7ABA0)}
   .fmpx-st.ok{color:var(--ok,#3FBF7F);font-weight:800;font-size:17px}
   .fmpx-err{color:var(--bad,#FF6B5E);font-size:13px;margin:6px 0 0;min-height:1em}
@@ -99,6 +102,7 @@
   function telaQr(r, o) {
     box().innerHTML = `<div class="fmpx-h"><b>Pix gerado · ${real(r.valor)}</b><button class="fmpx-x" type="button" aria-label="Fechar">×</button></div>
       ${SELO}
+      <div class="fmpx-cron" id="fmpxCron"><span>Finalize agora para liberar na hora</span><b id="fmpxRel">03:00</b></div>
       <p class="fmpx-p">Pague em qualquer banco. Assim que cair, esta tela libera sozinha.</p>
       <img class="fmpx-qr" alt="QR Code Pix" src="data:image/png;base64,${r.qr64}">
       <button class="fmpx-btn" id="fmpxCp" type="button">Copiar código Pix (copia e cola)</button>
@@ -112,6 +116,14 @@
     cp.addEventListener("click", async () => { try { await navigator.clipboard.writeText(r.qr); } catch { ta.select(); try { document.execCommand("copy"); } catch { /* */ } } cp.textContent = "Código copiado ✓"; setTimeout(() => { cp.textContent = "Copiar código Pix (copia e cola)"; }, 2500); });
     box().querySelector("#fmpxJa").addEventListener("click", () => confere(true));
     clearInterval(timer); timer = setInterval(() => confere(false), 4000);
+    // cronômetro de 3 min (prioridade); o código Pix em si continua valendo 30 min
+    const fim = Date.now() + 180e3, rel = box().querySelector("#fmpxRel"), cr = box().querySelector("#fmpxCron");
+    clearInterval(window.__fmpxCron); window.__fmpxCron = setInterval(() => {
+      if (!rel || !rel.isConnected || (st && st.pago)) { clearInterval(window.__fmpxCron); return; }
+      const ms = Math.max(0, fim - Date.now()), m = Math.floor(ms / 60000), sx = Math.floor((ms % 60000) / 1000);
+      rel.textContent = String(m).padStart(2, "0") + ":" + String(sx).padStart(2, "0");
+      if (!ms) { clearInterval(window.__fmpxCron); cr.classList.add("fim"); cr.querySelector("span").textContent = "Ainda dá tempo: este código Pix vale por 30 minutos."; rel.textContent = "⏳"; }
+    }, 250);
     setTimeout(() => { if (timer) { clearInterval(timer); timer = 0; const s = box().querySelector("#fmpxSt"); if (s && !st.pago) s.textContent = "O código expirou. Feche e gere um novo Pix."; } }, 30 * 60e3);
   }
 
