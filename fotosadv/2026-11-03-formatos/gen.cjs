@@ -3,11 +3,14 @@
 // Fotos: ../2026-11-03-p10/raw/p01_*.png (fa-img).
 const { chromium } = require('playwright'); const fs = require('fs'); const path = require('path');
 const R = (f) => 'data:image/png;base64,' + fs.readFileSync(path.join(__dirname, '..', '2026-11-03-p10', 'raw', f)).toString('base64');
-const SF = R('p01_selfie.png'); const EST = ['bracos', 'mesa', 'palestra', 'varanda', 'notebook', 'corredor']; const IM = EST.map((e) => R('p01_' + e + '.png'));
+// P=m01 troca a pessoa (fotos em ./raw/<P>_*.png quando não é p01). SO=F01,F02 limita os formatos.
+const PES = process.env.P || 'p01';
+const R2 = (f) => { const loc = path.join(__dirname, 'raw', f); return fs.existsSync(loc) ? 'data:image/png;base64,' + fs.readFileSync(loc).toString('base64') : R(f); };
+const SF = R2(PES + '_selfie.png'); const EST = ['bracos', 'mesa', 'palestra', 'varanda', 'notebook', 'corredor']; const IM = EST.map((e) => R2(PES + '_' + e + '.png'));
 const V49 = process.env.V === '49';
 // V=49: headline validada dos vencedores de 22/10 ("Ensaio profissional completo por R$ 49") com o preço atual da página.
 const H = V49 ? `<h1 style="font-size:60px;padding-top:44px">Ensaio profissional completo<br><b>por R$ 49,90</b><small style="display:block;font-size:28px;font-weight:600;color:#fff;margin-top:10px">Escolha sua profissão, envie uma selfie, e pronto!</small></h1>` : `<h1>1 selfie entra.<br><b>15 fotos profissionais saem.</b></h1>`;
-const PFX = V49 ? 'FOTOSADV_FMT49_' : 'FOTOSADV_FMT_';
+const PFX = (V49 ? 'FOTOSADV_FMT49_' : 'FOTOSADV_FMT_') + (PES === 'p01' ? '' : PES + '_');
 const CSS = `*{box-sizing:border-box;margin:0;padding:0}body{width:1080px;height:1350px;background:#0e1220;font-family:Poppins,sans-serif;color:#fff;overflow:hidden;position:relative}
 h1{font-size:64px;line-height:1.12;font-weight:700;text-align:center;padding:62px 60px 0;position:relative;z-index:9}h1 b{color:#e8ba48}
 .cta{position:absolute;left:60px;right:60px;bottom:58px;height:104px;border-radius:52px;background:#e8ba48;color:#0e1220;font-weight:700;font-size:38px;display:flex;align-items:center;justify-content:center;z-index:9}
@@ -74,6 +77,7 @@ const F = {
 (async () => {
   const b = await chromium.launch(); const p = await b.newPage({ viewport: { width: 1080, height: 1350 } });
   for (const [k, html] of Object.entries(F)) {
+    if (process.env.SO && !process.env.SO.split(',').includes(k.slice(0, 3))) continue;
     await p.setContent(`<html><head><style>${CSS}</style></head><body>${html}</body></html>`); await p.waitForTimeout(150);
     await p.screenshot({ path: path.join(__dirname, `${PFX}${k}.jpg`), type: 'jpeg', quality: 92 }); console.log('ok', k);
   }
