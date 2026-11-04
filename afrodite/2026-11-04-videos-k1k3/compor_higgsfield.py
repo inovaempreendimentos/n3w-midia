@@ -69,10 +69,14 @@ for fmt, (ow, oh) in {'9x16': (1080, 1920), '4x5': (1080, 1350)}.items():
 
 def ease(x): x = max(0.0, min(1.0, x)); return x * x * (3 - 2 * x)
 
-TARJA = Image.new('RGBA', (W, 64), (255, 214, 0, 255))
-_td = ImageDraw.Draw(TARJA)
-_td.text((W / 2, 32), 'Faça sua pergunta', font=pop(40), fill=(18, 18, 20, 255), anchor='mm')
-TARJA_Y = 250
+# headline fixa no topo (faixa sólida), como pedido pelo Othon em 04/11
+def _headline(w, h, size, cy):
+    im = Image.new('RGBA', (w, h), (255, 214, 0, 255))
+    ImageDraw.Draw(im).text((w / 2, cy), 'Faça sua pergunta', font=pop(size), fill=(18, 18, 20, 255), anchor='mm')
+    return im
+TARJA = _headline(W, 250, 78, 140)
+TARJA45 = _headline(1080, 112, 60, 58)
+TARJA_Y = 0
 
 def cta_old(im, t, W_, H_):
     ca = ease((t - CTA_T) / 0.4)
@@ -180,8 +184,7 @@ for i in range(n):
     can = bgf.convert('RGBA')
     xoff = int((1080 - small.width) / 2)
     can.alpha_composite(small.crop((0, top, small.width, top + 1350)), (xoff, 0))
-    t45 = TARJA.resize((1080, int(TARJA.height * sc / 0.86 * 0.86)))
-    can.alpha_composite(TARJA.resize((1080, int(64 * sc))) if False else TARJA, (0, int(TARJA_Y * sc) - top - 6))
+    can.alpha_composite(TARJA45, (0, 0))
     encs['4x5'].stdin.write(can.convert('RGB').tobytes())
 for e in encs.values():
     e.stdin.close(); e.wait()
