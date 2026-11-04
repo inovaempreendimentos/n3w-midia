@@ -9,7 +9,8 @@ D = os.path.dirname(os.path.abspath(__file__)) + '/'
 GF = '/usr/share/fonts/truetype/google-fonts/'
 k, src, out = sys.argv[1], sys.argv[2], sys.argv[3]
 hook = sys.argv[4] if len(sys.argv) > 4 and sys.argv[4] else None
-cor = tuple(int(sys.argv[5][i:i + 2], 16) for i in (0, 2, 4)) if len(sys.argv) > 5 else (18, 18, 20)
+cor = tuple(int(sys.argv[5][i:i + 2], 16) for i in (0, 2, 4)) if len(sys.argv) > 5 and sys.argv[5] else (18, 18, 20)
+EFEITO = sys.argv[6] if len(sys.argv) > 6 else ''
 W, H, FPS = 1080, 1920, 30
 S, OX, OY = 928 / 1080, 76, 134          # como o quadro inicial foi montado (gen start frame)
 orig = Image.open(D + f'src/{k}_original.jpg').convert('RGB')
@@ -85,6 +86,75 @@ def cta(im, t, W_, H_):
     d.polygon([(W_ / 2 - 44, ay), (W_ / 2 + 44, ay), (W_ / 2, ay + 50)], fill=col)
     d.rectangle([W_ / 2 - 14, ay - 50, W_ / 2 + 14, ay], fill=col)
 
+
+# ---------- efeitos de atenção nos 3 primeiros segundos (0 crédito) ----------
+QBOX = (q_xy[0], q_xy[1], q_xy[0] + q.width, q_xy[1] + q.height)
+def efeito(fr, t):
+    if t > 3.2 or not EFEITO: return fr
+    if EFEITO == 'zoom':
+        # começa dentro da pergunta e "abre" para o quadro inteiro, com um tranco no fim
+        p = ease(t / 0.75); z = 1.38 - 0.38 * p
+        cx, cy = (QBOX[0] + QBOX[2]) / 2, (QBOX[1] + QBOX[3]) / 2
+        cx = cx * (1 - p) + W / 2 * p; cy = cy * (1 - p) + H / 2 * p
+        sh = 10 * math.sin(t * 60) * max(0, 1 - abs(t - 0.82) / 0.12) if 0.7 < t < 0.94 else 0
+        w2, h2 = W / z, H / z
+        x0 = min(max(0, cx - w2 / 2 + sh), W - w2); y0 = min(max(0, cy - h2 / 2), H - h2)
+        return fr.crop((int(x0), int(y0), int(x0 + w2), int(y0 + h2))).resize((W, H), Image.LANCZOS)
+    if EFEITO == 'luz':
+        # dois feixes de luz passando na diagonal por cima da pergunta e das cartas
+        ov = Image.new('L', (W, H), 0); d = ImageDraw.Draw(ov)
+        for t0 in (0.15, 1.45):
+            pp = (t - t0) / 1.0
+            if 0 <= pp <= 1:
+                x = -500 + pp * (W + 1000)
+                for k2 in range(0, 260, 6):
+                    a = int(235 * (1 - abs(k2 - 130) / 130) ** 1.5)
+                    d.polygon([(x + k2, 0), (x + k2 + 6, 0), (x + k2 + 6 - 700, H), (x + k2 - 700, H)], fill=a)
+        glow = Image.new('RGBA', (W, H), (255, 250, 235, 0)); glow.putalpha(ov)
+        fr = fr.copy(); fr.alpha_composite(glow)
+        return fr
+    if EFEITO == 'seta':
+        fr = fr.copy(); d = ImageDraw.Draw(fr)
+        draw = ease(t / 0.45); bob = 14 * math.sin(t * 2 * math.pi * 1.6)
+        tip = (QBOX[2] + 18 + bob * 0.6, (QBOX[1] + QBOX[3]) / 2 + bob * 0.4)
+        st = (W - 70, QBOX[1] - 230)
+        pts = []
+        for i in range(31):
+            u = i / 30 * draw
+            mx, my = (st[0] + 40, tip[1] - 40)
+            x = (1 - u) ** 2 * st[0] + 2 * (1 - u) * u * mx + u * u * tip[0]
+            y = (1 - u) ** 2 * st[1] + 2 * (1 - u) * u * my + u * u * tip[1]
+            pts.append((x, y))
+        yel = (255, 214, 0, 255)
+        d.line(pts, fill=(20, 20, 20, 255), width=26, joint='curve'); d.line(pts, fill=yel, width=16, joint='curve')
+        if draw > 0.95:
+            ang = math.atan2(pts[-1][1] - pts[-4][1], pts[-1][0] - pts[-4][0])
+            L = 54
+            a1 = (tip[0] - L * math.cos(ang - 0.55), tip[1] - L * math.sin(ang - 0.55))
+            a2 = (tip[0] - L * math.cos(ang + 0.55), tip[1] - L * math.sin(ang + 0.55))
+            d.polygon([tip, a1, a2], fill=yel, outline=(20, 20, 20, 255), width=5)
+        # moldura pulsando na pergunta
+        pa = 0.5 + 0.5 * math.sin(t * 2 * math.pi * 2)
+        d.rounded_rectangle([QBOX[0] - 12, QBOX[1] - 12, QBOX[2] + 12, QBOX[3] + 12], radius=14, outline=(255, 214, 0, int(140 + 115 * pa)), width=8)
+        return fr
+    if EFEITO == 'notif':
+        # notificação de mensagem descendo no topo (área segura: a partir de 260 px)
+        p_in = ease(t / 0.35); p_out = ease((t - 2.7) / 0.35)
+        y = 260 - 220 * (1 - p_in) - 300 * p_out
+        if p_out >= 1: return fr
+        fr = fr.copy(); bw, bh = 960, 190
+        card = Image.new('RGBA', (bw, bh), (0, 0, 0, 0)); cd = ImageDraw.Draw(card)
+        cd.rounded_rectangle([0, 0, bw - 1, bh - 1], radius=34, fill=(250, 250, 250, 245), outline=(225, 225, 225, 255), width=2)
+        cd.ellipse([28, 40, 128, 140], fill=(37, 180, 100, 255))
+        cd.rounded_rectangle([56, 70, 100, 104], radius=10, fill=(255, 255, 255, 255)); cd.polygon([(62, 100), (60, 118), (78, 103)], fill=(255, 255, 255, 255))
+        cd.text((156, 38), 'Mensagem de cliente', font=pop(36), fill=(25, 25, 25, 255))
+        cd.text((bw - 40, 44), 'agora', font=ImageFont.truetype(GF + 'Poppins-Medium.ttf', 28), fill=(120, 120, 120, 255), anchor='ra')
+        cd.text((156, 96), '"Oi, bateu demais essa tiragem.', font=ImageFont.truetype(GF + 'Poppins-Medium.ttf', 34), fill=(60, 60, 60, 255))
+        cd.text((156, 138), 'Tudo muito certo..."', font=ImageFont.truetype(GF + 'Poppins-Medium.ttf', 34), fill=(60, 60, 60, 255))
+        fr.alpha_composite(card, (int(W / 2 - bw / 2), int(y)))
+        return fr
+    return fr
+
 for i in range(n):
     raw = dec.stdout.read(W * H * 3)
     if len(raw) < W * H * 3: break
@@ -92,20 +162,19 @@ for i in range(n):
     fr = Image.frombytes('RGB', (W, H), raw).convert('RGBA')
     # camadas nítidas: pergunta já no frame 0
     fr.alpha_composite(dep, dep_xy); fr.alpha_composite(q, q_xy); fr.alpha_composite(pr, pr_xy)
+    fr = efeito(fr, t)
     f916 = fr.copy(); cta(f916, t, W, H)
     encs['9x16'].stdin.write(f916.convert('RGB').tobytes())
     # 4:5: recorte central do 9:16, subindo para caber depoimento (topo) e cartas (base) em 1350 px
     sc = 1350 / (OY + 1651 * 1.0) if False else 0.80
     small = fr.resize((int(W * sc), int(H * sc)), Image.LANCZOS)
     top = int(OY * sc) + int((1651 * sc - 1350) / 2) if 1651 * sc > 1350 else int(OY * sc) - int((1350 - 1651 * sc) / 2)
-    can = Image.new('RGBA', (1080, 1350), (236, 232, 225, 255))
+    # fundo das laterais: o próprio quadro ampliado e desfocado (sem espelhar setas/cartas)
+    from PIL import ImageFilter
+    bgf = fr.resize((270, 480)).crop((0, int(top / H * 480 / sc * 1.0) if False else 60, 270, 60 + 338)).resize((1080, 1350)).filter(ImageFilter.GaussianBlur(28))
+    can = bgf.convert('RGBA')
     xoff = int((1080 - small.width) / 2)
-    can.alpha_composite(small.crop((0, top, small.width, top + 1350)), (xoff, 0)) if small.width <= 1080 else None
-    # preenche laterais com o próprio linho espelhado
-    if xoff > 0:
-        lft = small.crop((0, top, xoff, top + 1350)).transpose(Image.FLIP_LEFT_RIGHT)
-        rgt = small.crop((small.width - xoff, top, small.width, top + 1350)).transpose(Image.FLIP_LEFT_RIGHT)
-        can.alpha_composite(lft, (0, 0)); can.alpha_composite(rgt, (1080 - xoff, 0))
+    can.alpha_composite(small.crop((0, top, small.width, top + 1350)), (xoff, 0))
     cta(can, t, 1080, 1350)
     encs['4x5'].stdin.write(can.convert('RGB').tobytes())
 for e in encs.values():
