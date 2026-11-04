@@ -233,6 +233,10 @@ const TOOLS = [
       roas_minimo: num("ROAS mínimo (ex.: 1.2) — obrigatório quando a campanha usa LOWEST_COST_WITH_MIN_ROAS"),
       programacao: { type: "array", items: { type: "object" }, description: "horários de veiculação no fuso da conta, ex.: [{\"de\":10,\"ate\":17},{\"de\":0,\"ate\":2}] (horas cheias; dias opcional 0=dom..6=sáb). Só com orçamento vitalício" },
       estrategia_lance: str("estratégia de lance do conjunto quando ele tem orçamento próprio (padrão LOWEST_COST_WITHOUT_CAP; COST_CAP, LOWEST_COST_WITH_BID_CAP, LOWEST_COST_WITH_MIN_ROAS)"),
+      destino: str("opcional: destination_type do conjunto, ex.: WHATSAPP (clique para WhatsApp; use com otimizacao CONVERSATIONS)"),
+      pagina_id: str("opcional: página no promoted_object (obrigatória com destino WHATSAPP)"),
+      whatsapp: str("opcional: número do WhatsApp no promoted_object, só dígitos com DDI (ex.: 554888168343)"),
+      atribuicao_dias: num("opcional: janela de atribuição por clique em dias (1 ou 7). Campanha nova de conversas costuma aceitar só 1"),
     }, ["campanha_id", "nome"]),
     run: async (env, a) => {
       const adv = a.advantage_plus !== false;
@@ -251,7 +255,13 @@ const TOOLS = [
       return graph(env, "POST", `${act(env, a.conta)}/adsets`, {
         campaign_id: a.campanha_id, name: a.nome, status: "PAUSED",
         optimization_goal: a.otimizacao || "OFFSITE_CONVERSIONS", billing_event: "IMPRESSIONS",
-        promoted_object: a.pixel_id ? { pixel_id: a.pixel_id, custom_event_type: a.evento || "PURCHASE" } : undefined,
+        promoted_object: (a.pixel_id || a.pagina_id || a.whatsapp) ? {
+          ...(a.pixel_id ? { pixel_id: a.pixel_id, custom_event_type: a.evento || "PURCHASE" } : {}),
+          ...(a.pagina_id ? { page_id: a.pagina_id } : {}),
+          ...(a.whatsapp ? { whatsapp_phone_number: String(a.whatsapp).replace(/\D/g, "") } : {}),
+        } : undefined,
+        destination_type: a.destino || undefined,
+        attribution_spec: a.atribuicao_dias ? [{ event_type: "CLICK_THROUGH", window_days: Number(a.atribuicao_dias) }] : undefined,
         daily_budget: a.orcamento_diario_reais && !a.orcamento_total_reais ? Math.round(a.orcamento_diario_reais * 100) : undefined,
         lifetime_budget: a.orcamento_total_reais ? Math.round(a.orcamento_total_reais * 100) : undefined,
         end_time: a.fim,
