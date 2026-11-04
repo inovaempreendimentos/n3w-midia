@@ -1,6 +1,6 @@
 # Config COMPLETA do Worker n3w-meta. Qualquer deploy (wrangler ou Workers Builds)
 # precisa usar ESTA pasta como raiz (ferramentas/n3w-meta-mcp), senão apaga bucket e variáveis.
-# Segredos ficam só no Cloudflare (não somem num `wrangler deploy`): META_TOKEN, CONNECTOR_KEY.
+# Segredos ficam só no Cloudflare (não somem num `wrangler deploy`): META_TOKEN, CONNECTOR_KEY (conta Claude 1), CONNECTOR_KEY_2 (conta Claude 2).
 name = "n3w-meta"
 main = "src/index.js"
 compatibility_date = "2026-10-06"

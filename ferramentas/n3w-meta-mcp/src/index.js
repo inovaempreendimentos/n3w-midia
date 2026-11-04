@@ -774,7 +774,7 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: CORS });
 
     if (url.pathname === "/" || url.pathname === "/saude") {
-      return Response.json({ ok: true, servidor: SERVER_INFO, graph_version: env.GRAPH_VERSION, token_configurado: !!env.META_TOKEN, chave_configurada: !!env.CONNECTOR_KEY, midia_ligada: !!env.MIDIA }, { headers: CORS });
+      return Response.json({ ok: true, servidor: SERVER_INFO, graph_version: env.GRAPH_VERSION, token_configurado: !!env.META_TOKEN, chave_configurada: !!env.CONNECTOR_KEY, chave2_configurada: !!env.CONNECTOR_KEY_2, midia_ligada: !!env.MIDIA }, { headers: CORS });
     }
 
     // Arquivos públicos do bucket (para a Meta/Instagram buscarem). privado/ nunca é servido.
@@ -792,7 +792,9 @@ export default {
     const m = url.pathname.match(/^\/mcp(?:\/([^/]+))?\/?$/);
     if (!m) return new Response("not found", { status: 404 });
     const bearer = (request.headers.get("authorization") || "").replace(/^Bearer\s+/i, "");
-    if (!env.CONNECTOR_KEY || !(safeEqual(m[1] || "", env.CONNECTOR_KEY) || safeEqual(bearer, env.CONNECTOR_KEY))) {
+    // Uma chave por conta Claude: CONNECTOR_KEY (conta 1) e CONNECTOR_KEY_2 (conta 2). Revogar uma = apagar o secret.
+    const chaves = [env.CONNECTOR_KEY, env.CONNECTOR_KEY_2].filter(Boolean);
+    if (!chaves.length || !chaves.some((k) => safeEqual(m[1] || "", k) || safeEqual(bearer, k))) {
       return new Response("unauthorized", { status: 401, headers: CORS });
     }
     if (request.method === "GET") return new Response("method not allowed", { status: 405, headers: { ...CORS, Allow: "POST" } });
