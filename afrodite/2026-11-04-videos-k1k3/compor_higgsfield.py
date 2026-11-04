@@ -69,7 +69,12 @@ for fmt, (ow, oh) in {'9x16': (1080, 1920), '4x5': (1080, 1350)}.items():
 
 def ease(x): x = max(0.0, min(1.0, x)); return x * x * (3 - 2 * x)
 
-def cta(im, t, W_, H_):
+TARJA = Image.new('RGBA', (W, 64), (255, 214, 0, 255))
+_td = ImageDraw.Draw(TARJA)
+_td.text((W / 2, 32), 'Faça sua pergunta', font=pop(40), fill=(18, 18, 20, 255), anchor='mm')
+TARJA_Y = 250
+
+def cta_old(im, t, W_, H_):
     ca = ease((t - CTA_T) / 0.4)
     if ca <= 0: return
     im.alpha_composite(Image.new('RGBA', (W_, H_), (12, 10, 14, int(195 * ca))))
@@ -163,7 +168,7 @@ for i in range(n):
     # camadas nítidas: pergunta já no frame 0
     fr.alpha_composite(dep, dep_xy); fr.alpha_composite(q, q_xy); fr.alpha_composite(pr, pr_xy)
     fr = efeito(fr, t)
-    f916 = fr.copy(); cta(f916, t, W, H)
+    f916 = fr.copy(); f916.alpha_composite(TARJA, (0, TARJA_Y))
     encs['9x16'].stdin.write(f916.convert('RGB').tobytes())
     # 4:5: recorte central do 9:16, subindo para caber depoimento (topo) e cartas (base) em 1350 px
     sc = 1350 / (OY + 1651 * 1.0) if False else 0.80
@@ -175,7 +180,8 @@ for i in range(n):
     can = bgf.convert('RGBA')
     xoff = int((1080 - small.width) / 2)
     can.alpha_composite(small.crop((0, top, small.width, top + 1350)), (xoff, 0))
-    cta(can, t, 1080, 1350)
+    t45 = TARJA.resize((1080, int(TARJA.height * sc / 0.86 * 0.86)))
+    can.alpha_composite(TARJA.resize((1080, int(64 * sc))) if False else TARJA, (0, int(TARJA_Y * sc) - top - 6))
     encs['4x5'].stdin.write(can.convert('RGB').tobytes())
 for e in encs.values():
     e.stdin.close(); e.wait()
