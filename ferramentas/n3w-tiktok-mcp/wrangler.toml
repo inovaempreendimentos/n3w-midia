@@ -1,0 +1,13 @@
+# Config do Worker n3w-tiktok. Deploy com raiz = ferramentas/n3w-tiktok-mcp.
+# Segredos ficam só no Cloudflare: TIKTOK_TOKEN, CONNECTOR_KEY (conta Claude 1), CONNECTOR_KEY_2 (conta Claude 2).
+name = "n3w-tiktok"
+main = "src/index.js"
+compatibility_date = "2026-10-06"
+keep_vars = true
+
+[vars]
+API_VERSION = "v1.3"
+ADVERTISER_IDS = "7702236482601238529,7702235971634528308"
+
+[observability]
+enabled = true
