@@ -1,0 +1,16 @@
+name: job-on-push-contingencia
+on:
+  push:
+    branches: ['contingencia-*']
+    paths: ['jobs/afrodite-k1k3-*.sh']
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: bash jobs/afrodite-k1k3-baixar-20261104.sh
+      - run: |
+          git config user.name n3w-bot; git config user.email n3w-bot@users.noreply.github.com
+          git add afrodite/; git commit -m "job: baixar K1 K3" || echo nada; git push
