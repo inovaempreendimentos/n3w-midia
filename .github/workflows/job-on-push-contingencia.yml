@@ -1,0 +1,18 @@
+name: job-on-push-contingencia
+on:
+  push:
+    branches: ['contingencia-*']
+    paths: ['jobs/afrodite-k1k3-*.sh']
+permissions:
+  contents: write
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 2 }
+      - run: |
+          for f in $(git diff --name-only HEAD~1 HEAD -- 'jobs/afrodite-k1k3-*.sh'); do bash "$f"; done
+      - run: |
+          git config user.name n3w-bot; git config user.email n3w-bot@users.noreply.github.com
+          git add afrodite/; git commit -m "job: download $(date +%H%M)" || echo nada; git push
