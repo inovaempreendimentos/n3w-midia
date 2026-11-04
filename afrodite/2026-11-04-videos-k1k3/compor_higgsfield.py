@@ -70,9 +70,12 @@ for fmt, (ow, oh) in {'9x16': (1080, 1920), '4x5': (1080, 1350)}.items():
 def ease(x): x = max(0.0, min(1.0, x)); return x * x * (3 - 2 * x)
 
 # headline fixa no topo (faixa sólida), como pedido pelo Othon em 04/11
+HL = os.environ.get('HL', 'ffd600')                       # cor da faixa: ffd600 amarelo, 121214 preto, 6e1630 vinho, 4a206e roxo
+HL_BG = tuple(int(HL[i:i + 2], 16) for i in (0, 2, 4))
+HL_FG = (18, 18, 20) if sum(HL_BG) > 450 else (255, 255, 255)
 def _headline(w, h, size, cy):
-    im = Image.new('RGBA', (w, h), (255, 214, 0, 255))
-    ImageDraw.Draw(im).text((w / 2, cy), 'Faça sua pergunta', font=pop(size), fill=(18, 18, 20, 255), anchor='mm')
+    im = Image.new('RGBA', (w, h), HL_BG + (255,))
+    ImageDraw.Draw(im).text((w / 2, cy), 'Faça sua pergunta', font=pop(size), fill=HL_FG + (255,), anchor='mm')
     return im
 TARJA = _headline(W, 250, 78, 140)
 TARJA45 = _headline(1080, 112, 60, 58)
