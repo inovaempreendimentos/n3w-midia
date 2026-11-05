@@ -303,7 +303,7 @@ async function graphAll(caminho,parametros,max){
 const linhasSupabase=({answer})=>{let a=answer;if(typeof a==='string'){try{a=JSON.parse(a)}catch(e){}}const txt=typeof a==='string'?a:(a&&typeof a.result==='string'?a.result:null);if(txt===null){if(a&&a.error)throw new Error(a.error.message||String(a.error));return a;}const m=txt.match(/<untrusted-data-([a-f0-9-]+)>\s*([\[{][\s\S]*?)\s*<\/untrusted-data-\1>/);if(!m)throw new Error(txt.slice(0,300));return JSON.parse(m[2]);};
 async function vendasReais(d1,d2){
   if(!/^\d{4}-\d{2}-\d{2}$/.test(d1)||!/^\d{4}-\d{2}-\d{2}$/.test(d2))throw new Error('data inválida');
-  const q="with t as (select right(trim(x),8) d from wa_config, unnest(string_to_array(chaves->>'testadores',',')) x where id='default'), l as (select distinct on (wa_id) wa_id, meta->'referral'->>'source_id' ad, created_at from wa_messages where direction='in' and meta ? 'referral' order by wa_id, id), l2 as (select * from l where right(wa_id,8) not in (select d from t)), ld as (select ad, count(*) leads from l2 where (created_at at time zone 'America/Sao_Paulo')::date between date '"+d1+"' and date '"+d2+"' group by ad), v as (select l2.ad, count(*) vendas, sum(p.valor) fat from tarot_pedidos p join l2 using (wa_id) where p.status='pago' and p.valor>0 and coalesce(p.plano,'')<>'teste' and (coalesce(p.pago_em,p.criado_em) at time zone 'America/Sao_Paulo')::date between date '"+d1+"' and date '"+d2+"' group by l2.ad) select coalesce(ld.ad,v.ad) ad, coalesce(ld.leads,0) leads, coalesce(v.vendas,0) vendas, coalesce(v.fat,0) fat from ld full join v on ld.ad=v.ad";
+  const q="with t as (select right(trim(x),8) d from wa_config, unnest(string_to_array(chaves->>'testadores',',')) x where id='default'), l as (select distinct on (wa_id) wa_id, meta->'referral'->>'source_id' ad, created_at from wa_messages where direction='in' and meta ? 'referral' order by wa_id, id), lpx as (select f.wa_id, 'lp'::text ad, f.created_at from (select distinct on (wa_id) wa_id, created_at, body from wa_messages where direction='in' order by wa_id, id) f where f.body ~ '#[A-Z0-9]{5}' and f.wa_id not in (select wa_id from l)), l2 as (select * from (select wa_id, ad, created_at from l union all select wa_id, ad, created_at from lpx) z where right(wa_id,8) not in (select d from t)), ld as (select ad, count(*) leads from l2 where (created_at at time zone 'America/Sao_Paulo')::date between date '"+d1+"' and date '"+d2+"' group by ad), v as (select l2.ad, count(*) vendas, sum(p.valor) fat from tarot_pedidos p join l2 using (wa_id) where p.status='pago' and p.valor>0 and coalesce(p.plano,'')<>'teste' and (coalesce(p.pago_em,p.criado_em) at time zone 'America/Sao_Paulo')::date between date '"+d1+"' and date '"+d2+"' group by l2.ad) select coalesce(ld.ad,v.ad) ad, coalesce(ld.leads,0) leads, coalesce(v.vendas,0) vendas, coalesce(v.fat,0) fat from ld full join v on ld.ad=v.ad";
   const r=await mcp.callTool(SB,'execute_sql',{project_id:SB_PROJ,query:q},{cache:refresh?{staleTime:5*60e3,gcTime:30*60e3,refresh:true}:{staleTime:5*60e3,gcTime:30*60e3}});
   const rows=linhasSupabase({answer:r.payload!==undefined?r.payload:r});
   const m=new Map(); for(const x of rows||[]){if(x.ad)m.set(String(x.ad),{leads:+x.leads||0,vendas:+x.vendas||0,fat:+x.fat||0});} return m;
@@ -394,6 +394,11 @@ function montar(res,real,per,d1,d2,conf){
       soma(A.get(i.ad_id).m,m);
     }
   }
+  // (05/11) LP taro-leitura: clique passa pela página antes do WhatsApp; a conversa chega só com o código "#XXXXX" (sem referral).
+  // Essas vendas vêm como ad='lp' e entram no anúncio de maior gasto da campanha "LP taro" (o código não separa Meta de TikTok).
+  const lp=R.get('lp'); if(lp){let alvo=null;for(const a of A.values()){const c=C.get(a.campaign_id);if(c&&/LP\s*taro/i.test(c.name)&&(!alvo||a.m.gasto>alvo.m.gasto))alvo=a;}
+    if(alvo){const y=R.get(alvo.id)||{leads:0,vendas:0,fat:0};R.set(alvo.id,{leads:y.leads+lp.leads,vendas:y.vendas+lp.vendas,fat:y.fat+lp.fat});R.delete('lp');
+      const cc=C.get(alvo.campaign_id); if(cc&&!/TikTok juntos/.test(cc.name))cc.name+=' · vendas da LP (Meta + TikTok juntos)';}}
   for(const [id,a] of A){const x=R.get(id); if(x){a.m.leads+=x.leads;a.m.vendas+=x.vendas;a.m.fat+=x.fat;}
     const s=S.get(a.adset_id); if(s)soma(s.m,a.m); const c=C.get(a.campaign_id); if(c)soma(c.m,a.m);}
   let rN=0,rV=0;for(const [id,x] of R){rN+=x.vendas;rV+=x.fat;}
@@ -535,8 +540,8 @@ async function carregaRoas(accs){
   const tr=JSON.stringify({since:dias[0],until:h});
   const gastos=new Map(dias.map(d=>[d,0]));
   const pg=accs.map(async a=>{const fx=a.cur==='USD'?FX:1;const rows=await graphAll('act_'+a.id+'/insights',{level:'account',fields:'spend',time_increment:'1',time_range:tr,limit:100},1);for(const r of rows){if(gastos.has(r.date_start))gastos.set(r.date_start,gastos.get(r.date_start)+(+r.spend||0)*fx);}});
-  const ads=new Set(); if(data)for(const id of data.A.keys())ads.add(String(id));
-  const pv=dias.map(d=>vendasReais(d,d).then(m=>{let f=0,v=0;for(const [ad,x] of m){if(ads.has(ad)){f+=x.fat;v+=x.vendas;}}return [d,f,v];}));
+  const ads=new Set(); if(data)for(const id of data.A.keys())ads.add(String(id)); const temLP=!!data&&[...data.C.values()].some(c=>/LP\s*taro/i.test(c.name));
+  const pv=dias.map(d=>vendasReais(d,d).then(m=>{let f=0,v=0;for(const [ad,x] of m){if(ads.has(ad)||(ad==='lp'&&temLP)){f+=x.fat;v+=x.vendas;}}return [d,f,v];}));
   const [ ,vend]=await Promise.all([Promise.all(pg),Promise.all(pv)]);
   if(seq!==roasSeq)return;
   const pts=vend.map(([d,f,v])=>{const g=gastos.get(d)||0;return{d,g,f,v,roas:g>0?f/g:null};});
