@@ -53,6 +53,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{ou
 .chip button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:0 4px}
 .conf{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px}.conf b{font-variant-numeric:tabular-nums}.conf .ok{color:#2e9d5b;font-weight:700}.conf .dif{color:#d9822b;font-weight:700}.conf .nota{flex-basis:100%;color:var(--muted);font-size:11.5px}
 #toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,40px);opacity:0;background:#2e9d5b;color:#fff;font-weight:700;padding:10px 16px;border-radius:999px;transition:.3s;z-index:50;pointer-events:none}#toast.on{opacity:1;transform:translate(-50%,0)}
+#d-val-hint{font-weight:600;color:var(--accent)}
 .aviso-bid{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:rgba(217,130,43,.15);color:#d9822b;font-size:13px;font-weight:600}
 .status{font-size:12.5px;color:var(--muted);min-height:18px}
 .status.err{color:var(--bad)}
@@ -594,7 +595,7 @@ function atualizaDialogo(){
     const mud=isFinite(v)&&v>0&&v!==atual;
     $('d-ok').textContent=!mud?'Confirmar':(v>atual?'Aumentar para ':'Reduzir para ')+money(v,r.acc.cur);
     $('d-ok').disabled=!mud||!mcp||(need&&$('d-aut').value.trim().length<3);
-    $('d-val-hint').textContent='('+(r.acc.cur==='USD'?'US$':'R$')+(tipo==='orcamento'?' por dia':'')+(r.acc.cur==='USD'&&isFinite(v)?' ≈ '+brl(v*FX):'')+')';
+    $('d-val-hint').textContent=r.acc.cur==='USD'?'— digite em DÓLAR (US$)'+(tipo==='orcamento'?' por dia':'')+', igual no Gerenciador'+(isFinite(v)?' · US$ '+nf2.format(v)+' ≈ '+brl(v*FX):''):'— em reais (R$)'+(tipo==='orcamento'?' por dia':'');
   } else $('d-ok').disabled=!mcp||(need&&$('d-aut').value.trim().length<3);
   $('d-pedido').value=pedidoTexto();
 }
