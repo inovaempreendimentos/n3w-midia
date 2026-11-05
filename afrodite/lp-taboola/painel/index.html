@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" data-theme="light">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -61,7 +61,8 @@ button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{ou
 .aviso-bid{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:rgba(217,130,43,.15);color:#d9822b;font-size:13px;font-weight:600}
 .status{font-size:12.5px;color:var(--muted);min-height:18px}
 .status.err{color:var(--bad)}
-.tablebox{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.tablebox{overflow:auto;max-height:62vh;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+.tablebox thead th{position:sticky;top:0;z-index:2;background:var(--panel)}
 table{border-collapse:separate;border-spacing:0;width:100%;font-variant-numeric:tabular-nums;font-size:13px}
 th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;vertical-align:middle}
 th{position:sticky;top:0;background:var(--panel);font-weight:600;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;user-select:none}
