@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Painel Tarô · N3W</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* Layout: barra de filtros fixa no topo, resumo em linha, abas, tabela larga que rola só dentro do próprio quadro. */
+:root{
+  --bg:#f7f5fa; --panel:#ffffff; --ink:#1d1726; --muted:#6b6378; --line:#e3dfea;
+  --accent:#5b3a91; --accent-soft:#efe8f8; --ok:#1f7a4d; --ok-soft:#e3f4ea; --warn:#9a6200; --bad:#b4232c; --bad-soft:#fbe7e8;
+  --font-display:"Fraunces",Georgia,serif; --font-body:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#141019; --panel:#1d1824; --ink:#efeaf6; --muted:#a49cb3; --line:#332c3e;
+  --accent:#b99be9; --accent-soft:#2c2340; --ok:#5fcf93; --ok-soft:#173326; --warn:#e8b450; --bad:#f2777e; --bad-soft:#3a1a1e; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#141019; --panel:#1d1824; --ink:#efeaf6; --muted:#a49cb3; --line:#332c3e;
+  --accent:#b99be9; --accent-soft:#2c2340; --ok:#5fcf93; --ok-soft:#173326; --warn:#e8b450; --bad:#f2777e; --bad-soft:#3a1a1e; color-scheme:dark}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:14px;line-height:1.4}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--bg)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 40px;display:flex;flex-direction:column;gap:14px}
+h1{font-family:var(--font-display);font-weight:600;font-size:22px;margin:0;letter-spacing:-.01em}
+.top{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:6px 12px}
+.sub{color:var(--muted);font-size:12.5px}
+.filters{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);padding-block:8px;display:flex;flex-wrap:wrap;gap:8px;align-items:center;border-bottom:1px solid var(--line)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--panel)}
+.seg button{border:0;background:none;color:var(--ink);font:inherit;font-size:13px;padding:6px 10px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--panel);font-weight:600}
+select,input[type=search],input[type=number],input[type=text]{font:inherit;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 8px;min-width:0}
+input[type=search]{flex:1 1 160px}
+button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.btn{font:inherit;font-size:13px;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:6px 10px;cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--panel);font-weight:600}
+.btn.danger{background:var(--bad);border-color:var(--bad);color:#fff;font-weight:600}
+.btn:disabled{opacity:.5;cursor:default}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+.tile .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tile .v{font-family:var(--font-display);font-size:22px;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tabs button{font:inherit;font-size:14px;background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:8px 12px;cursor:pointer}
+.tabs button[aria-selected="true"]{color:var(--ink);border-bottom-color:var(--accent);font-weight:600}
+.tabs .n{font-size:11px;color:var(--muted);margin-left:4px;font-variant-numeric:tabular-nums}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);color:var(--ink);border-radius:999px;padding:4px 6px 4px 10px;font-size:12.5px;max-width:100%}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60vw}
+.chip button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:0 4px}
+.conf{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px}.conf b{font-variant-numeric:tabular-nums}.conf .ok{color:#2e9d5b;font-weight:700}.conf .dif{color:#d9822b;font-weight:700}.conf .nota{flex-basis:100%;color:var(--muted);font-size:11.5px}
+.status{font-size:12.5px;color:var(--muted);min-height:18px}
+.status.err{color:var(--bad)}
+.tablebox{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+table{border-collapse:separate;border-spacing:0;width:100%;font-variant-numeric:tabular-nums;font-size:13px}
+th,td{padding:7px 9px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;vertical-align:middle}
+th{position:sticky;top:0;background:var(--panel);font-weight:600;font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;cursor:pointer;user-select:none}
+th.l,td.l{text-align:left}
+th .ar{font-size:9px;margin-left:3px;color:var(--accent)}
+td.name{min-width:220px;max-width:340px;white-space:normal}
+.col-sw,.col-name{position:sticky;background:var(--panel);z-index:1}
+.col-sw{left:0;width:48px}
+.col-name{left:48px;box-shadow:1px 0 0 var(--line)}
+th.col-sw,th.col-name{z-index:2}
+.nm{background:none;border:0;padding:0;font:inherit;color:var(--ink);text-align:left;cursor:pointer;font-weight:500;line-height:1.3}
+.nm:hover{color:var(--accent);text-decoration:underline}
+.nm.plain{cursor:default}.nm.plain:hover{color:var(--ink);text-decoration:none}
+.meta{display:flex;gap:8px;flex-wrap:wrap;margin-top:2px;font-size:11.5px;color:var(--muted)}
+.meta a{color:var(--muted)}
+.pill{display:inline-block;font-size:11px;padding:1px 6px;border-radius:999px;background:var(--bad-soft);color:var(--bad)}
+.pill.ok{background:var(--ok-soft);color:var(--ok)}
+.acc{font-size:12px;color:var(--muted);text-align:left;max-width:150px;white-space:normal}
+.sw{width:36px;height:20px;border-radius:999px;border:0;background:var(--line);position:relative;cursor:pointer;padding:0}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--panel);transition:left .15s}
+.sw[aria-checked="true"]{background:var(--ok)}
+.sw[aria-checked="true"]::after{left:18px}
+.ed{display:inline-flex;align-items:center;gap:4px}
+.ed button{border:1px solid var(--line);background:none;color:var(--accent);border-radius:6px;font-size:11px;padding:1px 6px;cursor:pointer}
+.dim{color:var(--muted)}
+.usd{display:block;font-size:11px;color:var(--muted)}
+.good{color:var(--ok);font-weight:600}.bad{color:var(--bad);font-weight:600}
+tr.total td{font-weight:600;background:var(--accent-soft)}
+tr.total td.col-sw,tr.total td.col-name{background:var(--accent-soft)}
+.empty{padding:28px 12px;text-align:center;color:var(--muted)}
+.note{font-size:12px;color:var(--muted);max-width:75ch}
+dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);padding:0;width:min(440px,calc(100vw - 32px))}
+dialog::backdrop{background:rgba(10,6,16,.45)}
+.dlg{padding:16px;display:flex;flex-direction:column;gap:10px}
+.dlg h2{font-family:var(--font-display);font-weight:600;font-size:18px;margin:0}
+.dlg label{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted)}
+.dlg .row{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap}
+.dlg .warn{background:var(--accent-soft);border-radius:8px;padding:8px 10px;font-size:12.5px}
+.dlg .res{border-radius:8px;padding:8px 10px;font-size:13px;white-space:pre-wrap;word-break:break-word}
+.dlg .res.ok{background:var(--ok-soft);color:var(--ok)}
+.dlg .res.err{background:var(--bad-soft);color:var(--bad)}
+.dlg textarea{font:inherit;font-size:12px;width:100%;box-sizing:border-box;min-height:70px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:6px}
+@media (prefers-reduced-motion:reduce){.sw::after{transition:none}}
+.tot-baixo td{border-top:2px solid currentColor;font-weight:700}
+</style>
+
+<div class="wrap">
+  <div class="top">
+    <h1>Painel Tarô</h1>
+    <div class="sub" id="updated">Tarô Afrodite · Meta Ads + vendas reais</div>
+  </div>
+
+  <div class="filters" role="group" aria-label="Filtros">
+    <div class="seg" id="f-periodo" aria-label="Período">
+      <button data-v="hoje" aria-pressed="true">Hoje</button>
+      <button data-v="ontem" aria-pressed="false">Ontem</button>
+      <button data-v="7d" aria-pressed="false">7 dias</button>
+      <button data-v="desde" aria-pressed="false">Desde 25/10</button>
+    </div>
+    <select id="f-conta" aria-label="Conta">
+      <option value="">Todas as contas</option>
+    </select>
+    <div class="seg" id="f-produto" aria-label="Produto">
+      <button data-v="tarot" aria-pressed="true">Tarô</button>
+      <button data-v="fotos" aria-pressed="false">Fotos</button>
+    </div>
+    <div class="seg" id="f-status" aria-label="Status">
+      <button data-v="ativos" aria-pressed="true">Ativos</button>
+      <button data-v="todos" aria-pressed="false">Todos</button>
+    </div>
+    <input type="search" id="f-busca" placeholder="Buscar pelo nome" aria-label="Buscar pelo nome">
+    <button class="btn" id="b-atualizar" type="button">Atualizar</button>
+  </div>
+
+  <div class="tiles" id="tiles">
+    <div class="tile"><div class="k">Gasto</div><div class="v" id="t-gasto">—</div></div>
+    <div class="tile"><div class="k">Faturamento real</div><div class="v" id="t-fat">—</div></div>
+    <div class="tile"><div class="k">ROAS real</div><div class="v" id="t-roas">—</div></div>
+    <div class="tile"><div class="k">Vendas reais</div><div class="v" id="t-vendas">—</div></div>
+    <div class="tile"><div class="k">CPA real</div><div class="v" id="t-cpa">—</div></div>
+    <div class="tile"><div class="k">Leads reais</div><div class="v" id="t-leads">—</div></div>
+  </div>
+
+  <div class="conf" id="conf" hidden></div>
+
+  <div class="tabs" role="tablist">
+    <button role="tab" data-t="c" aria-selected="true" id="tab-c">Campanhas<span class="n" id="n-c"></span></button>
+    <button role="tab" data-t="s" aria-selected="false" id="tab-s">Conjuntos<span class="n" id="n-s"></span></button>
+    <button role="tab" data-t="a" aria-selected="false" id="tab-a">Anúncios<span class="n" id="n-a"></span></button>
+  </div>
+  <div class="chips" id="chips"></div>
+  <div class="status" id="status" aria-live="polite">Carregando…</div>
+
+  <div class="tablebox"><table id="tbl"><thead id="thead"></thead><tbody id="tbody"></tbody></table></div>
+
+  <p class="note">Leads reais = primeira mensagem no WhatsApp vinda do anúncio. Vendas reais = pedidos pagos do Tarô, ligados ao anúncio que trouxe a pessoa, sem testadores. Conta do sócio em US$; totais em R$ (US$ × 5,55). Pausar e reduzir é livre. Ativar e aumentar pedem a frase de autorização do dono.</p>
+</div>
+
+<dialog id="dlg">
+  <div class="dlg">
+    <h2 id="d-title">Confirmar</h2>
+    <div id="d-msg"></div>
+    <label id="d-val-wrap" hidden>Novo valor <span id="d-val-hint"></span>
+      <input type="number" id="d-val" step="0.01" min="0" inputmode="decimal">
+    </label>
+    <div class="warn" id="d-aut-wrap" hidden>
+      <label>Isso ativa ou aumenta gasto. Digite a frase de autorização do dono.
+        <input type="text" id="d-aut" autocomplete="off">
+      </label>
+    </div>
+    <div class="res" id="d-res" hidden></div>
+    <details id="d-pedido-wrap">
+      <summary class="sub">Pedir ao Claude em vez disso</summary>
+      <textarea id="d-pedido" readonly></textarea>
+      <div class="row"><button class="btn" type="button" id="d-copiar">Copiar pedido</button></div>
+    </details>
+    <div class="row">
+      <button class="btn" type="button" id="d-cancel">Cancelar</button>
+      <button class="btn primary" type="button" id="d-ok">Confirmar</button>
+    </div>
+  </div>
+</dialog>
+
+<style>#f-produto{display:none!important}.ed button{display:none!important}.sw{pointer-events:none;opacity:.55}</style>
+<script>
+(function(){
+  async function post(b){const r=await fetch('/painel/api/d',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b),credentials:'include'});const j=await r.json().catch(()=>({erro:'resposta inválida'}));if(r.status===401)throw new Error('Login expirado. Recarregue a página.');return j;}
+  const shim={
+    async callTool(server,tool,args){
+      if(tool==='consultar'){return {payload:await post({tipo:'meta',caminho:args.caminho,parametros:args.parametros||{}})};}
+      if(tool==='execute_sql'){const q=String(args.query||'');const ds=[...q.matchAll(/date '(\d{4}-\d{2}-\d{2})'/g)].map(m=>m[1]);
+        const j=await post({tipo:/mp_n/.test(q)?'conf':'vendas',d1:ds[0],d2:ds[1]||ds[0]});if(j.erro)throw new Error(j.erro);
+        return {payload:{result:'<untrusted-data-a1>'+JSON.stringify(j.rows||[])+'</untrusted-data-a1>'}};}
+      throw new Error('Pausar, orçamento e lance só pelo painel do Claude. Este link é só leitura.');
+    },
+    async invalidate(){}
+  };
+  window.claude={use:async()=>shim};
+})();
+</script>
+<script>
+(function(){
+'use strict';
+const META='N3w meta', SB='Supabase', SB_PROJ='cdtfglylekiyxdmrgbne', FX=5.55, DESDE='2026-10-25', SOCIO_ID='28205242959171884';
+const ACCS=[
+  {id:'1157066350319035',k:'B',label:'Bruno Rodrigues BM · Conta B',cur:'BRL'},
+  {id:'820375738490626',k:'C',label:'BM C · Conta C',cur:'BRL',re:/AFRODITE|REVOLU[ÇC][ÃA]O|#09|(^|[^A-Z0-9])RS([^A-Z0-9]|$)/},
+  {id:'1805973277429998',k:'A',label:'Bruno Rodrigues BM · Conta A',cur:'BRL',termo:{tarot:'AFRODITE',fotos:'FOTOSADV'}},
+  {id:'28205242959171884',k:'S',label:'BM 2738 unlimited · Sócio',cur:'USD'}
+];
+const $=(id)=>document.getElementById(id);
+const st={periodo:'hoje',conta:'',produto:'tarot',status:'ativos',busca:'',tab:'c',sel:{c:new Map(),s:new Map()},sort:{c:['gasto',-1],s:['gasto',-1],a:['gasto',-1]}};
+try{const s=JSON.parse(localStorage.getItem('ctrl-anuncios')||'{}');if(s.periodo)st.periodo=s.periodo;if(s.status)st.status=s.status;if(typeof s.conta==='string')st.conta=s.conta;}catch(e){}
+const save=()=>{try{localStorage.setItem('ctrl-anuncios',JSON.stringify({periodo:st.periodo,status:st.status,conta:st.conta}))}catch(e){}};
+let mcp=null, data=null, loadSeq=0, refresh=false;
+
+// ---------- formato
+const nf0=new Intl.NumberFormat('pt-BR',{maximumFractionDigits:0});
+const nf2=new Intl.NumberFormat('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+const brl=(v)=>v==null||!isFinite(v)?'—':'R$ '+nf2.format(v);
+const usd=(v)=>v==null||!isFinite(v)?'—':'US$ '+nf2.format(v);
+const money=(v,cur)=>cur==='USD'?usd(v):brl(v);
+const int=(v)=>v==null||!isFinite(v)?'—':nf0.format(v);
+const pct=(v)=>v==null||!isFinite(v)?'—':nf2.format(v*100)+'%';
+const x2=(v)=>v==null||!isFinite(v)?'—':nf2.format(v)+'×';
+const curto=(n)=>{const p=String(n||'').split(' | ');return p[0].length>3?p[0]:(p.slice(0,2).join(' | '));};
+
+// ---------- datas (São Paulo)
+const hojeSP=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date());
+const addDias=(d,n)=>{const t=new Date(d+'T12:00:00Z');t.setUTCDate(t.getUTCDate()+n);return t.toISOString().slice(0,10);};
+function faixa(p){const h=hojeSP();if(p==='hoje')return[h,h];if(p==='ontem'){const o=addDias(h,-1);return[o,o];}if(p==='7d')return[addDias(h,-7),addDias(h,-1)];return[DESDE,h];}
+const metaPeriodo=(p)=>p==='hoje'?{date_preset:'today'}:p==='ontem'?{date_preset:'yesterday'}:p==='7d'?{date_preset:'last_7d'}:{time_range:JSON.stringify({since:DESDE,until:hojeSP()})};
+
+// ---------- conector
+function errTxt(e){
+  const c=e&&e.code; const m=String((e&&e.message)||e||'');
+  if(c==='needs_reauth')return 'Reconecte o conector '+(e.server||'')+' em Configurações → Conectores do claude.ai.';
+  if(c==='server_not_connected')return 'Adicione o conector '+(e.server||'')+' em Configurações → Conectores do claude.ai.';
+  if(c==='not_in_manifest'||c==='approval_required'||c==='consent_required')return 'O acesso ao conector '+(e.server||'')+' não foi permitido nesta página. Permita no menu de permissões do artefato.';
+  if(c==='server_unavailable')return 'O conector '+(e.server||'')+' não respondeu. Tente de novo em instantes.';
+  if(/\b17\b|request limit|limite de chamadas/i.test(m))return 'A Meta limitou as chamadas desta conta (código 17). Espere alguns minutos e atualize.';
+  return m.slice(0,400)||'Erro desconhecido.';
+}
+const CACHE={staleTime:10*60e3,gcTime:60*60e3};
+async function graph(caminho,parametros,cache){
+  const r=await mcp.callTool(META,'consultar',{caminho,parametros},{cache:refresh?{...(cache||CACHE),refresh:true}:(cache||CACHE)});
+  let p=r.payload; if(typeof p==='string'){try{p=JSON.parse(p)}catch(e){throw new Error(p.slice(0,300))}}
+  if(p&&p.error)throw new Error((p.error.message||'Erro da Meta')+(p.error.code?' (código '+p.error.code+')':''));
+  return p;
+}
+async function graphAll(caminho,parametros,max){
+  let out=[],after=null;
+  for(let i=0;i<(max||4);i++){
+    const p=await graph(caminho,after?{...parametros,after}:parametros);
+    out=out.concat((p&&p.data)||[]);
+    if(!(p&&p.paging&&p.paging.next&&p.paging.cursors&&p.paging.cursors.after))break;
+    after=p.paging.cursors.after;
+  }
+  return out;
+}
+const linhasSupabase=({answer})=>{let a=answer;if(typeof a==='string'){try{a=JSON.parse(a)}catch(e){}}const txt=typeof a==='string'?a:(a&&typeof a.result==='string'?a.result:null);if(txt===null){if(a&&a.error)throw new Error(a.error.message||String(a.error));return a;}const m=txt.match(/<untrusted-data-([a-f0-9-]+)>\s*([\[{][\s\S]*?)\s*<\/untrusted-data-\1>/);if(!m)throw new Error(txt.slice(0,300));return JSON.parse(m[2]);};
+async function vendasReais(d1,d2){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d1)||!/^\d{4}-\d{2}-\d{2}$/.test(d2))throw new Error('data inválida');
+  const q="with t as (select right(trim(x),8) d from wa_config, unnest(string_to_array(chaves->>'testadores',',')) x where id='default'), l as (select distinct on (wa_id) wa_id, meta->'referral'->>'source_id' ad, created_at from wa_messages where direction='in' and meta ? 'referral' order by wa_id, id), l2 as (select * from l where right(wa_id,8) not in (select d from t)), ld as (select ad, count(*) leads from l2 where (created_at at time zone 'America/Sao_Paulo')::date between date '"+d1+"' and date '"+d2+"' group by ad), v as (select l2.ad, count(*) vendas, sum(p.valor) fat from tarot_pedidos p join l2 using (wa_id) where p.status='pago' and p.valor>0 and coalesce(p.plano,'')<>'teste' and (coalesce(p.pago_em,p.criado_em) at time zone 'America/Sao_Paulo')::date between date '"+d1+"' and date '"+d2+"' group by l2.ad) select coalesce(ld.ad,v.ad) ad, coalesce(ld.leads,0) leads, coalesce(v.vendas,0) vendas, coalesce(v.fat,0) fat from ld full join v on ld.ad=v.ad";
+  const r=await mcp.callTool(SB,'execute_sql',{project_id:SB_PROJ,query:q},{cache:refresh?{staleTime:5*60e3,gcTime:30*60e3,refresh:true}:{staleTime:5*60e3,gcTime:30*60e3}});
+  const rows=linhasSupabase({answer:r.payload!==undefined?r.payload:r});
+  const m=new Map(); for(const x of rows||[]){if(x.ad)m.set(String(x.ad),{leads:+x.leads||0,vendas:+x.vendas||0,fat:+x.fat||0});} return m;
+}
+
+async function conferencia(d1,d2){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d1)||!/^\d{4}-\d{2}-\d{2}$/.test(d2))throw new Error('data inválida');
+  const B="between date '"+d1+"' and date '"+d2+"'";
+  const q="with t as (select right(trim(x),8) d from wa_config, unnest(string_to_array(chaves->>'testadores',',')) x where id='default'), l as (select distinct wa_id from wa_messages where direction='in' and meta ? 'referral'), p as (select p.wa_id, p.valor, right(p.wa_id,8) in (select d from t) tst from tarot_pedidos p where status='pago' and valor>0 and coalesce(plano,'')<>'teste' and (coalesce(pago_em,criado_em) at time zone 'America/Sao_Paulo')::date "+B+"), mp as (select count(*) n, coalesce(sum(bruto),0) v from financeiro.lancamentos m where conta_id='mp_n3w' and tipo='entrada' and produto in ('afrodite','revolucao_solar') and (ocorrido_em at time zone 'America/Sao_Paulo')::date "+B+" and not exists (select 1 from tarot_pedidos x where x.mp_payment_id=m.id_externo and x.status='reembolsado')), lp as (select distinct wa_id from wa_messages where direction='in' and body ~ '#[A-Z0-9]{5}') select mp.n mp_n, mp.v mp_v, (select count(*) from p) jac_n, (select coalesce(sum(valor),0) from p) jac_v, (select count(*) from p where tst) tst_n, (select coalesce(sum(valor),0) from p where tst) tst_v, (select count(*) from p where not tst and wa_id not in (select wa_id from l) and wa_id in (select wa_id from lp)) lp_n, (select coalesce(sum(valor),0) from p where not tst and wa_id not in (select wa_id from l) and wa_id in (select wa_id from lp)) lp_v, (select max(ocorrido_em) at time zone 'America/Sao_Paulo' from financeiro.lancamentos where conta_id='mp_n3w') mp_ult from mp";
+  const r=await mcp.callTool(SB,'execute_sql',{project_id:SB_PROJ,query:q},{cache:refresh?{staleTime:5*60e3,gcTime:30*60e3,refresh:true}:{staleTime:5*60e3,gcTime:30*60e3}});
+  const rows=linhasSupabase({answer:r.payload!==undefined?r.payload:r}); const x=(rows&&rows[0])||{};
+  const o={};for(const k in x)o[k]=k==='mp_ult'?x[k]:+x[k]||0;return o;
+}
+
+// ---------- carga por conta
+function filtroConta(acc){const f=[];if(acc.termo)f.push({field:'campaign.name',operator:'CONTAIN',value:acc.termo[st.produto]});return f;}
+function contaNoProduto(acc){return st.produto==='tarot'||!!acc.termo;}
+async function carregaConta(acc,per){
+  const out={acc,erro:null,camps:[],sets:[],ads:[],ins:[]};
+  try{
+    if(!acc.nome){try{const n=await graph('act_'+acc.id,{fields:'name,currency'},{staleTime:24*3600e3,gcTime:7*24*3600e3});acc.nome=n.name;if(n.currency)acc.cur=n.currency;}catch(e){acc.nome=acc.label;}}
+    const fl=filtroConta(acc); const pf=fl.length?{filtering:JSON.stringify(fl)}:{};
+    const cf=acc.termo?{filtering:JSON.stringify([{field:'name',operator:'CONTAIN',value:acc.termo[st.produto]}])}:{};
+    const [camps,sets,ads,ins]=await Promise.all([
+      graphAll('act_'+acc.id+'/campaigns',{fields:'id,name,status,effective_status,daily_budget,bid_strategy',limit:200,...cf},2),
+      graphAll('act_'+acc.id+'/adsets',{fields:'id,name,campaign_id,status,effective_status,daily_budget,bid_amount,bid_strategy',limit:500,...pf},3),
+      graphAll('act_'+acc.id+'/ads',{fields:'id,name,adset_id,campaign_id,status,effective_status',limit:500,...pf},4),
+      graphAll('act_'+acc.id+'/insights',{level:'ad',fields:'ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,spend,impressions,inline_link_clicks,actions,action_values',limit:500,...metaPeriodo(per),...pf},4)
+    ]);
+    let keep=(name)=>true;
+    if(acc.re)keep=(name)=>acc.re.test(String(name||'').toUpperCase());
+    const okCamp=new Set();
+    for(const c of camps){if(keep(c.name)){okCamp.add(c.id);out.camps.push(c);}}
+    for(const r of ins){if(!okCamp.has(r.campaign_id)&&keep(r.campaign_name)){okCamp.add(r.campaign_id);out.camps.push({id:r.campaign_id,name:r.campaign_name,status:'?',effective_status:'?'});}}
+    out.sets=sets.filter(s=>okCamp.has(s.campaign_id));
+    out.ads=ads.filter(a=>okCamp.has(a.campaign_id));
+    out.ins=ins.filter(r=>okCamp.has(r.campaign_id));
+  }catch(e){out.erro=errTxt(e);}
+  return out;
+}
+
+const act=(arr,t)=>{if(!arr)return 0;let s=0;for(const a of arr)if(a.action_type===t)s+=+a.value||0;return s;};
+const zero=()=>({gasto:0,gastoOrig:0,imp:0,clk:0,conv:0,pixC:0,pixV:0,leads:0,vendas:0,fat:0});
+function soma(a,b){for(const k in b)a[k]+=b[k];}
+
+async function carregar(){
+  if(!mcp)return;
+  const seq=++loadSeq; const per=st.periodo; const [d1,d2]=faixa(per);
+  setStatus('Carregando '+(st.conta?'1 conta':'contas')+'…');
+  const accs=ACCS.filter(a=>contaNoProduto(a)&&(!st.conta||st.conta===a.id));
+  const pReal=st.produto==='tarot'?vendasReais(d1,d2).catch(e=>({erro:errTxt(e)})):Promise.resolve(new Map());
+  const pConf=st.produto==='tarot'?conferencia(d1,d2).catch(e=>({erro:errTxt(e)})):null;
+  const res=await Promise.all(accs.map(a=>carregaConta(a,per)));
+  const real=await pReal;
+  const conf=st.produto==='tarot'?await pConf:null;
+  refresh=false;
+  if(seq!==loadSeq)return;
+  montar(res,real,per,d1,d2,conf);
+}
+
+function montar(res,real,per,d1,d2,conf){
+  const C=new Map(),S=new Map(),A=new Map(); const erros=[];
+  const realErr=real&&real.erro?real.erro:null; const R=real instanceof Map?real:new Map();
+  for(const r of res){
+    const acc=r.acc, fx=acc.cur==='USD'?FX:1;
+    if(r.erro){erros.push((acc.nome||acc.label)+': '+r.erro);continue;}
+    for(const c of r.camps)C.set(c.id,{lvl:'c',id:c.id,name:c.name,acc,status:c.status,eff:c.effective_status,budget:c.daily_budget!=null?+c.daily_budget/100:null,bidStrat:c.bid_strategy,bids:[],m:zero()});
+    for(const s of r.sets){S.set(s.id,{lvl:'s',id:s.id,name:s.name,acc,campaign_id:s.campaign_id,status:s.status,eff:s.effective_status,budget:s.daily_budget!=null?+s.daily_budget/100:null,bid:s.bid_amount!=null?+s.bid_amount/100:null,bidStrat:s.bid_strategy,m:zero()});
+      const c=C.get(s.campaign_id); if(c&&s.bid_amount!=null)c.bids.push(+s.bid_amount/100);}
+    for(const a of r.ads)A.set(a.id,{lvl:'a',id:a.id,name:a.name,acc,campaign_id:a.campaign_id,adset_id:a.adset_id,status:a.status,eff:a.effective_status,m:zero()});
+    for(const i of r.ins){
+      if(!S.has(i.adset_id))S.set(i.adset_id,{lvl:'s',id:i.adset_id,name:i.adset_name,acc,campaign_id:i.campaign_id,status:'?',eff:'?',budget:null,bid:null,m:zero()});
+      if(!A.has(i.ad_id))A.set(i.ad_id,{lvl:'a',id:i.ad_id,name:i.ad_name,acc,campaign_id:i.campaign_id,adset_id:i.adset_id,status:'?',eff:'?',m:zero()});
+      const g=+i.spend||0;
+      const m={gasto:g*fx,gastoOrig:g,imp:+i.impressions||0,clk:+i.inline_link_clicks||0,conv:act(i.actions,'onsite_conversion.messaging_conversation_started_7d'),pixC:act(i.actions,'omni_purchase'),pixV:act(i.action_values,'omni_purchase')*fx,leads:0,vendas:0,fat:0};
+      soma(A.get(i.ad_id).m,m);
+    }
+  }
+  for(const [id,a] of A){const x=R.get(id); if(x){a.m.leads+=x.leads;a.m.vendas+=x.vendas;a.m.fat+=x.fat;}
+    const s=S.get(a.adset_id); if(s)soma(s.m,a.m); const c=C.get(a.campaign_id); if(c)soma(c.m,a.m);}
+  let rN=0,rV=0;for(const [id,x] of R){rN+=x.vendas;rV+=x.fat;}
+  data={C,S,A,per,d1,d2,erros,realErr,conf,rN,rV,contasCarregadas:res.filter(r=>!r.erro).map(r=>r.acc.id),at:new Date()};
+  render();
+}
+
+// ---------- filtros e linhas
+function ativo(r){return r.eff==='ACTIVE'||r.status==='ACTIVE'&&r.eff==='?';}
+function linhas(t){
+  if(!data)return[];
+  let arr=[...(t==='c'?data.C:t==='s'?data.S:data.A).values()];
+  const q=st.busca.trim().toLowerCase();
+  if(st.conta)arr=arr.filter(r=>r.acc&&String(r.acc.id)===String(st.conta));
+  if(st.status==='ativos')arr=arr.filter(r=>ativo(r)||r.m.gasto>0);
+  if(t!=='c'&&st.sel.c.size)arr=arr.filter(r=>st.sel.c.has(r.campaign_id));
+  if(t==='a'&&st.sel.s.size)arr=arr.filter(r=>st.sel.s.has(r.adset_id));
+  if(q)arr=arr.filter(r=>String(r.name||'').toLowerCase().includes(q));
+  const [k,dir]=st.sort[t];
+  const val=(r)=>{const v=calc(r)[k];return k==='nome'||k==='conta'?String(v||'').toLowerCase():(v==null||!isFinite(v)?-Infinity:v);};
+  arr.sort((a,b)=>{const x=val(a),y=val(b);return x<y?-dir:x>y?dir:0;});
+  return arr;
+}
+function calc(r){const m=r.m;return{nome:r.name,conta:nomeConta(r.acc),orc:r.budget,bid:r.lvl==='s'?r.bid:r.lvl==='c'&&r.bids.length?Math.min(...r.bids):null,gasto:m.gasto,imp:m.imp,clk:m.clk,ctr:m.imp?m.clk/m.imp:null,cpc:m.clk?m.gasto/m.clk:null,conv:m.conv,leads:m.leads,vendas:m.vendas,cpa:m.vendas?m.gasto/m.vendas:null,fat:m.fat,roas:m.gasto?m.fat/m.gasto:null,roasPix:m.gasto?m.pixV/m.gasto:null};}
+
+const COLS=[
+  {k:'sw',t:'',cls:'col-sw l',nosort:1},{k:'nome',t:'Nome',cls:'col-name l'},{k:'conta',t:'Conta',cls:'l'},
+  {k:'orc',t:'Orçamento'},{k:'bid',t:'Bid cap'},{k:'gasto',t:'Gasto'},{k:'imp',t:'Impr.'},{k:'clk',t:'Cliques'},
+  {k:'ctr',t:'CTR'},{k:'cpc',t:'CPC'},{k:'conv',t:'Conversas'},{k:'leads',t:'Leads reais'},{k:'vendas',t:'Vendas reais'},
+  {k:'cpa',t:'CPA'},{k:'fat',t:'Fatur. real'},{k:'roas',t:'ROAS real'},{k:'roasPix',t:'ROAS pixel'}
+];
+
+function el(tag,attrs,...kids){const e=document.createElement(tag);if(attrs)for(const k in attrs){if(k==='class')e.className=attrs[k];else if(k==='text')e.textContent=attrs[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),attrs[k]);else e.setAttribute(k,attrs[k]);}for(const c of kids)if(c!=null)e.append(c);return e;}
+function setStatus(t,err){const s=$('status');s.textContent=t;s.classList.toggle('err',!!err);}
+
+function render(){
+  const t=st.tab;
+  for(const b of document.querySelectorAll('.tabs button'))b.setAttribute('aria-selected',String(b.dataset.t===t));
+  if(data){$('n-c').textContent=linhasCount('c');$('n-s').textContent=linhasCount('s');$('n-a').textContent=linhasCount('a');}
+  // chips
+  const ch=$('chips');ch.replaceChildren();
+  for(const [lv,map] of [['c',st.sel.c],['s',st.sel.s]])for(const [id,nm] of map){
+    ch.append(el('span',{class:'chip'},el('span',{text:(lv==='c'?'Campanha: ':'Conjunto: ')+curto(nm),title:nm}),el('button',{type:'button','aria-label':'Remover filtro',text:'×',onclick:()=>{map.delete(id);if(lv==='c'){for(const [sid] of st.sel.s){const s=data&&data.S.get(sid);if(s&&s.campaign_id===id)st.sel.s.delete(sid);}}render();}})));
+  }
+  // head
+  const tr=el('tr');
+  for(const c of COLS){
+    const [k,dir]=st.sort[t];
+    const th=el('th',{class:c.cls||'',scope:'col'},c.t);
+    if(!c.nosort){th.append(el('span',{class:'ar',text:k===c.k?(dir>0?'▲':'▼'):''}));th.addEventListener('click',()=>{const s=st.sort[t];st.sort[t]=s[0]===c.k?[c.k,-s[1]]:[c.k,c.k==='nome'||c.k==='conta'?1:-1];render();});th.setAttribute('aria-sort',k===c.k?(dir>0?'ascending':'descending'):'none');}
+    if((c.k==='orc'||c.k==='bid')&&t==='a')th.textContent='';
+    tr.append(th);
+  }
+  $('thead').replaceChildren(tr);
+  const tb=$('tbody'); tb.replaceChildren();
+  if(!data){return;}
+  const arr=linhas(t);
+  // total
+  const tot={lvl:'tot',name:'Total ('+arr.length+')',acc:{label:''},m:zero(),budget:null,bids:[]};
+  for(const r of arr)soma(tot.m,r.m);
+  if(arr.length)tb.append(linhaTotal(tot,t));
+  for(const r of arr)tb.append(linha(r,t));
+  if(arr.length>1){const lt=linhaTotal(tot,t);lt.classList.add('tot-baixo');tb.append(lt);}
+  if(!arr.length)tb.append(el('tr',null,el('td',{class:'empty l',colspan:String(COLS.length)},data.erros.length?'Sem dados. Veja o aviso acima.':(st.status==='ativos'?'Nada ativo ou com gasto neste período. Troque para "Todos".':'Nada encontrado com estes filtros.'))));
+  // tiles
+  const T=calc(tot);
+  $('t-gasto').textContent=brl(T.gasto);$('t-fat').textContent=st.produto==='tarot'?brl(T.fat):'—';$('t-roas').textContent=st.produto==='tarot'?x2(T.roas):'—';
+  $('t-vendas').textContent=st.produto==='tarot'?int(T.vendas):'—';$('t-cpa').textContent=st.produto==='tarot'?brl(T.cpa):'—';$('t-leads').textContent=st.produto==='tarot'?int(T.leads):'—';
+  renderConf();
+  const avisos=[...data.erros]; if(data.realErr)avisos.push('Vendas reais: '+data.realErr);
+  const quando=data.at.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
+  const per=data.d1===data.d2?data.d1.split('-').reverse().join('/'):data.d1.split('-').reverse().slice(0,2).join('/')+' a '+data.d2.split('-').reverse().slice(0,2).join('/');
+  $('updated').textContent='Período '+per+' · atualizado às '+quando;
+  setStatus(avisos.length?avisos.join(' · '):'',!!avisos.length);
+}
+function renderConf(){
+  const box=$('conf'); const c=data&&data.conf;
+  if(st.produto!=='tarot'||!c){box.hidden=true;return;}
+  box.hidden=false; box.replaceChildren();
+  if(c.erro){box.append(el('span',{text:'Conferência com Mercado Pago indisponível: '+c.erro}));return;}
+  // vendas atribuídas a anúncios de TODAS as contas carregadas (sem filtro de conta)
+  let aN=0,aV=0;
+  for(const a of data.A.values()){aN+=a.m.vendas;aV+=a.m.fat;}
+  const outN=data.rN-aN,outV=data.rV-aV;
+  const semN=c.jac_n-c.tst_n-data.rN-c.lp_n,semV=c.jac_v-c.tst_v-data.rV-c.lp_v;
+  const bate=Math.abs(c.mp_v-c.jac_v)<0.5&&c.mp_n===c.jac_n;
+  const it=(k,n,v)=>{const s=el('span');s.append(k+' ',el('b',{text:int(n)+' · '+brl(v)}));return s;};
+  box.append(it('Mercado Pago N3W:',c.mp_n,c.mp_v),it('Jacira (pagos):',c.jac_n,c.jac_v),
+    el('span',{class:bate?'ok':'dif',text:bate?'✓ batem':'diferença de '+int(c.jac_n-c.mp_n)+' venda(s) · '+brl(c.jac_v-c.mp_v)}));
+  const qb=el('span',{class:'nota'});
+  const partes=['Das vendas da Jacira: '+int(aN)+' (' +brl(aV)+') vieram de anúncios das contas carregadas e estão nas tabelas'];
+  if(outN)partes.push(int(outN)+' ('+brl(outV)+') de anúncios de outras contas');
+  if(c.lp_n)partes.push(int(c.lp_n)+' ('+brl(c.lp_v)+') de página TikTok/Taboola');
+  if(semN)partes.push(int(semN)+' ('+brl(semV)+') sem anúncio identificado');
+  if(c.tst_n)partes.push(int(c.tst_n)+' de testadores');
+  let txt=partes.join(' · ')+'.';
+  if(!bate)txt+=' Diferença MP × Jacira costuma ser venda dos últimos minutos ainda não lida do Mercado Pago (última leitura '+String(c.mp_ult||'').slice(11,16)+').';
+  if(!st.conta||String(st.conta)===SOCIO_ID)txt+=' A conta do sócio usa o fuso de Chicago: o "dia" dela vai das 03h às 03h (horário de Brasília).';
+  qb.textContent=txt; box.append(qb);
+}
+function linhasCount(t){return String(linhas(t).length);}
+
+function cellMoney(v,r){const td=el('td');if(r.acc&&r.acc.cur==='USD'&&r.lvl!=='tot'&&v!=null&&isFinite(v)){td.append(usd(v/FX));td.append(el('span',{class:'usd',text:brl(v)}));}else td.textContent=brl(v);return td;}
+function roasCell(v,real){const td=el('td',{text:x2(v)});if(real&&v!=null&&isFinite(v))td.className=v>=1.5?'good':v<1?'bad':'';return td;}
+
+function linhaTotal(r,t){
+  const c=calc(r);const tr=el('tr',{class:'total'});
+  tr.append(el('td',{class:'col-sw'}),el('td',{class:'col-name l',text:r.name}),el('td',{class:'acc'}),el('td'),el('td'));
+  appendMetrics(tr,c,r);return tr;
+}
+function appendMetrics(tr,c,r){
+  const re=st.produto==='tarot';
+  tr.append(cellMoney(c.gasto,r),el('td',{text:int(c.imp)}),el('td',{text:int(c.clk)}),el('td',{text:pct(c.ctr)}),cellMoney(c.cpc,r),el('td',{text:int(c.conv)}),
+    el('td',{text:re?int(c.leads):'—'}),el('td',{text:re?int(c.vendas):'—'}),re?cellMoney(c.cpa,r):el('td',{text:'—'}),el('td',{text:re?brl(c.fat):'—'}),re?roasCell(c.roas,true):el('td',{text:'—'}),roasCell(c.roasPix,false));
+}
+const NIVEL={c:'campanha',s:'conjunto',a:'anúncio'};
+function linha(r,t){
+  const c=calc(r);const tr=el('tr');
+  const on=r.status==='ACTIVE';
+  const sw=el('button',{class:'sw',role:'switch','aria-checked':String(on),'aria-label':(on?'Pausar ':'Ativar ')+NIVEL[r.lvl],type:'button',onclick:()=>acao(on?'pausar':'ativar',r)});
+  tr.append(el('td',{class:'col-sw l'},sw));
+  // nome
+  const nm=el('button',{class:'nm'+(t==='a'?' plain':''),type:'button',text:r.name||r.id,title:r.name||''});
+  if(t==='c')nm.addEventListener('click',()=>{st.sel.c.set(r.id,r.name);st.tab='s';render();});
+  else if(t==='s')nm.addEventListener('click',()=>{st.sel.s.set(r.id,r.name);if(!st.sel.c.has(r.campaign_id)&&st.sel.c.size){const cc=data.C.get(r.campaign_id);st.sel.c.set(r.campaign_id,cc?cc.name:r.campaign_id);}st.tab='a';render();});
+  const meta=el('div',{class:'meta'});
+  if(r.eff&&r.eff!=='?'&&r.eff!=='ACTIVE')meta.append(el('span',{class:'pill',text:traduz(r.eff)}));
+  else if(r.eff==='ACTIVE')meta.append(el('span',{class:'pill ok',text:'Ativo'}));
+  const lnk='https://adsmanager.facebook.com/adsmanager/manage/'+(r.lvl==='c'?'campaigns':r.lvl==='s'?'adsets':'ads')+'?act='+r.acc.id+'&selected_'+(r.lvl==='c'?'campaign':r.lvl==='s'?'adset':'ad')+'_ids='+r.id;
+  meta.append(el('a',{href:lnk,target:'_blank',rel:'noopener',text:'abrir na Meta'}));
+  tr.append(el('td',{class:'col-name l name'},nm,meta));
+  tr.append(el('td',{class:'acc',text:nomeConta(r.acc)}));
+  // orçamento
+  const tdO=el('td');
+  if(t!=='a'&&r.budget!=null){tdO.append(el('span',{class:'ed'},money(r.budget,r.acc.cur),el('button',{type:'button','aria-label':'Editar orçamento',text:'editar',onclick:()=>acao('orcamento',r)})));}
+  else if(t!=='a')tdO.append(el('span',{class:'dim',text:r.lvl==='s'?'na campanha':'nos conjuntos'}));
+  tr.append(tdO);
+  // bid
+  const tdB=el('td');
+  if(t==='s'&&r.bid!=null)tdB.append(el('span',{class:'ed'},money(r.bid,r.acc.cur),el('button',{type:'button','aria-label':'Editar bid cap',text:'editar',onclick:()=>acao('lance',r)})));
+  else if(t==='c'&&r.bids.length){const mn=Math.min(...r.bids),mx=Math.max(...r.bids);tdB.append(el('span',{class:'ed'},mn===mx?money(mn,r.acc.cur):money(mn,r.acc.cur)+'–'+nf2.format(mx),el('button',{type:'button','aria-label':'Editar bid cap de todos os conjuntos',text:'editar',onclick:()=>acao('lance',r)})));}
+  else if(t!=='a')tdB.append(el('span',{class:'dim',text:'sem bid'}));
+  tr.append(tdB);
+  appendMetrics(tr,c,r);
+  return tr;
+}
+function nomeConta(a){return a.label?(a.nome&&a.nome!==a.label?a.label+' · '+a.nome:a.label):'';}
+function traduz(e){return({PAUSED:'Pausado',CAMPAIGN_PAUSED:'Campanha pausada',ADSET_PAUSED:'Conjunto pausado',PENDING_REVIEW:'Em análise',DISAPPROVED:'Reprovado',WITH_ISSUES:'Com problema',IN_PROCESS:'Processando',ARCHIVED:'Arquivado'})[e]||e;}
+
+// ---------- ações
+let pend=null;
+function acao(tipo,r){
+  const d=$('dlg'), nome=curto(r.name), niv=NIVEL[r.lvl], cur=r.acc.cur==='USD'?'US$':'R$';
+  pend={tipo,r};
+  $('d-res').hidden=true;$('d-ok').disabled=false;$('d-ok').textContent='Confirmar';$('d-cancel').textContent='Cancelar';
+  $('d-val').value='';$('d-aut').value='';$('d-val-wrap').hidden=true;$('d-aut-wrap').hidden=true;$('d-pedido-wrap').open=!mcp;
+  $('d-ok').className='btn primary';
+  if(tipo==='pausar'){$('d-title').textContent='Pausar '+niv+'?';$('d-msg').textContent='Pausar “'+nome+'” ('+(r.acc.nome||r.acc.label)+')?';$('d-ok').className='btn danger';$('d-ok').textContent='Pausar';}
+  if(tipo==='ativar'){$('d-title').textContent='Ativar '+niv+'?';$('d-msg').textContent='Ativar “'+nome+'” ('+(r.acc.nome||r.acc.label)+')? Volta a gastar.';$('d-aut-wrap').hidden=false;$('d-ok').textContent='Ativar';}
+  if(tipo==='orcamento'){$('d-title').textContent='Orçamento diário';$('d-msg').textContent='“'+nome+'”. Hoje: '+money(r.budget,r.acc.cur)+' por dia.';$('d-val-wrap').hidden=false;$('d-val-hint').textContent='('+cur+' por dia)';$('d-val').value=r.budget;}
+  if(tipo==='lance'){const atual=r.lvl==='s'?r.bid:Math.min(...r.bids);$('d-title').textContent='Bid cap';$('d-msg').textContent='“'+nome+'”. Hoje: '+(r.lvl==='s'?money(r.bid,r.acc.cur):money(Math.min(...r.bids),r.acc.cur)+(r.bids.length>1?' a '+money(Math.max(...r.bids),r.acc.cur)+' em '+r.bids.length+' conjuntos (o novo valor vale para todos)':''))+'.';$('d-val-wrap').hidden=false;$('d-val-hint').textContent='('+cur+')';$('d-val').value=atual;}
+  atualizaDialogo();
+  if(!d.open)d.showModal();
+  setTimeout(()=>{(tipo==='orcamento'||tipo==='lance'?$('d-val'):tipo==='ativar'?$('d-aut'):$('d-ok')).focus();},0);
+}
+function precisaAut(){
+  if(!pend)return false; const {tipo,r}=pend; const v=parseFloat($('d-val').value);
+  if(tipo==='ativar')return true;
+  if(tipo==='orcamento')return r.budget==null||v>r.budget;
+  if(tipo==='lance'){const atuais=r.lvl==='s'?[r.bid]:r.bids;return atuais.some(b=>b==null||v>b);}
+  return false;
+}
+function pedidoTexto(){
+  const {tipo,r}=pend; const v=$('d-val').value; const cur=r.acc.cur==='USD'?'US$':'R$';
+  const quem=NIVEL[r.lvl]+' “'+r.name+'” (id '+r.id+', '+(r.acc.nome||r.acc.label)+')';
+  if(tipo==='pausar')return 'Pausar o '+quem+'.';
+  if(tipo==='ativar')return 'Ativar o '+quem+'. Autorização: '+($('d-aut').value||'[frase de autorização]');
+  if(tipo==='orcamento')return 'Mudar o orçamento diário do '+quem+' de '+cur+' '+r.budget+' para '+cur+' '+v+'.'+(precisaAut()?' Autorização: '+($('d-aut').value||'[frase de autorização]'):'');
+  return 'Mudar o bid cap do '+quem+' para '+cur+' '+v+(r.lvl==='c'?' em todos os conjuntos':'')+'.'+(precisaAut()?' Autorização: '+($('d-aut').value||'[frase de autorização]'):'');
+}
+function atualizaDialogo(){
+  if(!pend)return;
+  const need=precisaAut(); $('d-aut-wrap').hidden=!need;
+  const {tipo,r}=pend;
+  if(tipo==='orcamento'||tipo==='lance'){
+    const v=parseFloat($('d-val').value); const atual=tipo==='orcamento'?r.budget:(r.lvl==='s'?r.bid:Math.min(...r.bids));
+    const mud=isFinite(v)&&v>0&&v!==atual;
+    $('d-ok').textContent=!mud?'Confirmar':(v>atual?'Aumentar para ':'Reduzir para ')+money(v,r.acc.cur);
+    $('d-ok').disabled=!mud||!mcp||(need&&$('d-aut').value.trim().length<3);
+    $('d-val-hint').textContent='('+(r.acc.cur==='USD'?'US$':'R$')+(tipo==='orcamento'?' por dia':'')+(r.acc.cur==='USD'&&isFinite(v)?' ≈ '+brl(v*FX):'')+')';
+  } else $('d-ok').disabled=!mcp||(need&&$('d-aut').value.trim().length<3);
+  $('d-pedido').value=pedidoTexto();
+}
+$('d-val').addEventListener('input',atualizaDialogo);$('d-aut').addEventListener('input',atualizaDialogo);
+$('d-cancel').addEventListener('click',()=>{$('dlg').close();pend=null;});
+$('d-copiar').addEventListener('click',()=>{const t=$('d-pedido');try{navigator.clipboard.writeText(t.value).then(()=>{$('d-copiar').textContent='Copiado';},()=>{t.select();});}catch(e){t.select();}});
+$('d-ok').addEventListener('click',async()=>{
+  if(!pend||!mcp)return; const {tipo,r}=pend; const aut=$('d-aut').value.trim(); const v=parseFloat($('d-val').value);
+  const need=precisaAut();
+  let tool,args;
+  if(tipo==='pausar'){tool='pausar';args={id:r.id};}
+  if(tipo==='ativar'){tool='ativar';args={ids:[r.id],autorizacao_humana:aut};}
+  if(tipo==='orcamento'){tool='alterar_orcamento';args={id:r.id,orcamento_diario_reais:Math.round(v*100)/100};if(need)args.autorizacao_humana=aut;}
+  if(tipo==='lance'){tool='alterar_lance';args=r.lvl==='s'?{conjunto_ids:[r.id]}:{campanha_ids:[r.id]};args.lance_reais=Math.round(v*100)/100;if(need)args.autorizacao_humana=aut;}
+  $('d-ok').disabled=true;$('d-ok').textContent='Enviando…';
+  const res=$('d-res');
+  try{
+    const out=await mcp.callTool(META,tool,args,{cache:false});
+    let p=out.payload; if(typeof p==='string'){try{p=JSON.parse(p)}catch(e){}}
+    let falha=null;
+    if(p&&p.error)falha=p.error.message||'Erro da Meta';
+    if(tool==='ativar'&&p&&p.resultado&&p.resultado[0]&&p.resultado[0].erro)falha=JSON.stringify(p.resultado[0].erro).slice(0,300);
+    if(tool==='alterar_lance'&&p&&p.falhas&&p.falhas.length)falha=p.falhas.length+' conjunto(s) falharam: '+(p.falhas[0].erro||'');
+    if(falha)throw new Error(falha);
+    let msg='Feito.';
+    if(tipo==='pausar'){r.status='PAUSED';r.eff='PAUSED';msg='Pausado: '+curto(r.name)+'.';}
+    if(tipo==='ativar'){r.status='ACTIVE';r.eff='ACTIVE';msg='Ativado: '+curto(r.name)+'.';}
+    if(tipo==='orcamento'){msg='Orçamento: '+money(r.budget,r.acc.cur)+' → '+money(args.orcamento_diario_reais,r.acc.cur)+'.';r.budget=args.orcamento_diario_reais;}
+    if(tipo==='lance'){msg='Bid cap: '+money(args.lance_reais,r.acc.cur)+(p&&p.ok!=null?' em '+p.ok+' conjunto(s)':'')+'.';if(r.lvl==='s'){r.bid=args.lance_reais;const c=data.C.get(r.campaign_id);if(c){c.bids=[...data.S.values()].filter(s=>s.campaign_id===c.id&&s.bid!=null).map(s=>s.bid);}}else{r.bids=r.bids.map(()=>args.lance_reais);for(const s of data.S.values())if(s.campaign_id===r.id&&s.bid!=null)s.bid=args.lance_reais;}}
+    res.className='res ok';res.textContent=msg;res.hidden=false;
+    $('d-ok').textContent='Feito';$('d-cancel').textContent='Fechar';
+    try{await mcp.invalidate(META,'consultar');}catch(e){}
+    render();
+  }catch(e){
+    res.className='res err';res.hidden=false;
+    res.textContent=(e&&e.code==='server_unavailable'||e&&e.code==='upstream_error')?'Sem resposta do conector. A ação pode ter sido feita. Clique em Atualizar antes de tentar de novo.':'Não foi feito. '+errTxt(e);
+    $('d-ok').textContent='Tentar de novo';$('d-ok').disabled=false;$('d-pedido-wrap').open=true;
+  }
+});
+
+// ---------- controles
+function seg(id,key,after){const box=$(id);const sync=()=>{for(const b of box.querySelectorAll('button'))b.setAttribute('aria-pressed',String(b.dataset.v===st[key]));};sync();box.addEventListener('click',(e)=>{const b=e.target.closest('button');if(!b||st[key]===b.dataset.v)return;st[key]=b.dataset.v;sync();save();after();});}
+seg('f-periodo','periodo',()=>carregar());
+seg('f-produto','produto',()=>{st.sel.c.clear();st.sel.s.clear();montaContas();carregar();});
+seg('f-status','status',()=>render());
+function montaContas(){const s=$('f-conta');const v=st.conta;s.replaceChildren(el('option',{value:'',text:'Todas as contas'}));for(const a of ACCS)if(contaNoProduto(a))s.append(el('option',{value:a.id,text:a.label+(a.nome&&a.nome!==a.id?' · '+a.nome:'')}));s.value=[...s.options].some(o=>o.value===v)?v:'';st.conta=s.value;}
+$('f-conta').addEventListener('change',(e)=>{st.conta=e.target.value;st.sel.c.clear();st.sel.s.clear();save();render();carregar();});
+let bt=null;$('f-busca').addEventListener('input',(e)=>{clearTimeout(bt);bt=setTimeout(()=>{st.busca=e.target.value;render();},150);});
+$('b-atualizar').addEventListener('click',()=>{refresh=true;carregar();});
+for(const b of document.querySelectorAll('.tabs button'))b.addEventListener('click',()=>{st.tab=b.dataset.t;render();});
+
+montaContas(); render();
+(async()=>{
+  mcp=window.claude&&window.claude.use?await window.claude.use('mcp'):null;
+  if(!mcp){setStatus('Esta página precisa ser aberta no claude.ai, com os conectores N3w meta e Supabase, para carregar os dados e executar ações.',true);return;}
+  await carregar();
+  montaContas();
+})();
+})();
+</script>
+
+</html>
