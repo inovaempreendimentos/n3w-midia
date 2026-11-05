@@ -351,7 +351,7 @@ function linhas(t){
   let arr=[...(t==='c'?data.C:t==='s'?data.S:data.A).values()];
   const q=st.busca.trim().toLowerCase();
   if(st.conta)arr=arr.filter(r=>r.acc&&String(r.acc.id)===String(st.conta));
-  if(st.status==='ativos')arr=arr.filter(r=>ativo(r)||r.m.gasto>0);
+  if(st.status==='ativos')arr=arr.filter(r=>ativo(r)||r.m.gasto>0||r.m.vendas>0||r.m.leads>0);
   if(t!=='c'&&st.sel.c.size)arr=arr.filter(r=>st.sel.c.has(r.campaign_id));
   if(t==='a'&&st.sel.s.size)arr=arr.filter(r=>st.sel.s.has(r.adset_id));
   if(q)arr=arr.filter(r=>String(r.name||'').toLowerCase().includes(q));
