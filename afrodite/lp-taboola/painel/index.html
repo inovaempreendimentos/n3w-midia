@@ -242,7 +242,8 @@ const curto=(n)=>{const p=String(n||'').split(' | ');return p[0].length>3?p[0]:(
 const hojeSP=()=>new Intl.DateTimeFormat('en-CA',{timeZone:'America/Sao_Paulo'}).format(new Date());
 const addDias=(d,n)=>{const t=new Date(d+'T12:00:00Z');t.setUTCDate(t.getUTCDate()+n);return t.toISOString().slice(0,10);};
 function faixa(p){const h=hojeSP();if(p==='hoje')return[h,h];if(p==='ontem'){const o=addDias(h,-1);return[o,o];}if(p==='7d')return[addDias(h,-7),addDias(h,-1)];return[DESDE,h];}
-const metaPeriodo=(p)=>p==='hoje'?{date_preset:'today'}:p==='ontem'?{date_preset:'yesterday'}:p==='7d'?{date_preset:'last_7d'}:{time_range:JSON.stringify({since:DESDE,until:hojeSP()})};
+// sempre pelas datas de Brasília (a conta B usa o fuso de Noronha e a do sócio, o de Chicago; 'today' da Meta seria outro dia)
+const metaPeriodo=(p)=>{const [d1,d2]=faixa(p);return {time_range:JSON.stringify({since:d1,until:d2})};};
 
 // ---------- conector
 function errTxt(e){
