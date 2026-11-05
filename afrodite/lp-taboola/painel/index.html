@@ -409,7 +409,7 @@ function render(){
   const avisos=[...data.erros]; if(data.realErr)avisos.push('Vendas reais: '+data.realErr);
   const quando=data.at.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const per=data.d1===data.d2?data.d1.split('-').reverse().join('/'):data.d1.split('-').reverse().slice(0,2).join('/')+' a '+data.d2.split('-').reverse().slice(0,2).join('/');
-  $('updated').textContent='Período '+per+' · atualizado às '+quando;
+  $('updated').textContent='Período '+per+' · atualizado às '+quando+' · atualiza sozinho a cada 3 min';
   setStatus(avisos.length?avisos.join(' · '):'',!!avisos.length);
 }
 function renderConf(){
@@ -576,6 +576,11 @@ function montaContas(){const s=$('f-conta');const v=st.conta;s.replaceChildren(e
 $('f-conta').addEventListener('change',(e)=>{st.conta=e.target.value;st.sel.c.clear();st.sel.s.clear();save();render();carregar();});
 let bt=null;$('f-busca').addEventListener('input',(e)=>{clearTimeout(bt);bt=setTimeout(()=>{st.busca=e.target.value;render();},150);});
 $('b-atualizar').addEventListener('click',()=>{refresh=true;carregar();});
+// atualização automática: a cada 3 min com a aba aberta, e ao voltar para a aba
+let ultimaCarga=Date.now();
+function autoAtualiza(){if(document.hidden||!mcp)return;const d=document.querySelector('dialog[open]');if(d)return;ultimaCarga=Date.now();refresh=true;carregar();}
+setInterval(()=>{if(Date.now()-ultimaCarga>=3*60e3)autoAtualiza();},30e3);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaCarga>60e3)autoAtualiza();});
 for(const b of document.querySelectorAll('.tabs button'))b.addEventListener('click',()=>{st.tab=b.dataset.t;render();});
 
 montaContas(); render();
