@@ -42,6 +42,7 @@ button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{ou
 .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}
 .tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
 .tile .k{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.tile .d{font-size:11.5px;color:var(--muted);margin-top:2px}
 .tile .v{font-family:var(--font-display);font-size:22px;font-variant-numeric:tabular-nums;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
 .tabs button{font:inherit;font-size:14px;background:none;border:0;border-bottom:2px solid transparent;color:var(--muted);padding:8px 12px;cursor:pointer}
@@ -159,12 +160,12 @@ dialog::backdrop{background:rgba(10,6,16,.45)}
   </div>
 
   <div class="tiles" id="tiles">
-    <div class="tile"><div class="k">Gasto</div><div class="v" id="t-gasto">—</div></div>
-    <div class="tile"><div class="k">Faturamento real</div><div class="v" id="t-fat">—</div></div>
-    <div class="tile"><div class="k">ROAS real</div><div class="v" id="t-roas">—</div></div>
-    <div class="tile"><div class="k">Vendas reais</div><div class="v" id="t-vendas">—</div></div>
-    <div class="tile"><div class="k">CPA real</div><div class="v" id="t-cpa">—</div></div>
-    <div class="tile"><div class="k">Leads reais</div><div class="v" id="t-leads">—</div></div>
+    <div class="tile"><div class="k">Gasto</div><div class="v" id="t-gasto">—</div><div class="d" id="t-gasto-d"></div></div>
+    <div class="tile"><div class="k">Faturamento</div><div class="v" id="t-fat">—</div><div class="d" id="t-fat-d"></div></div>
+    <div class="tile"><div class="k">ROAS</div><div class="v" id="t-roas">—</div><div class="d" id="t-roas-d"></div></div>
+    <div class="tile"><div class="k">Vendas</div><div class="v" id="t-vendas">—</div><div class="d" id="t-vendas-d"></div></div>
+    <div class="tile"><div class="k">CPA</div><div class="v" id="t-cpa">—</div><div class="d" id="t-cpa-d"></div></div>
+    <div class="tile"><div class="k">Leads reais</div><div class="v" id="t-leads">—</div><div class="d" id="t-leads-d"></div></div>
   </div>
 
   <div class="conf" id="conf" hidden></div>
@@ -245,7 +246,8 @@ const ACCS=[
   {id:'1157066350319035',k:'B',label:'Bruno Rodrigues BM · Conta B',cur:'BRL'},
   {id:'820375738490626',k:'C',label:'BM C · Conta C',cur:'BRL',re:/AFRODITE|REVOLU[ÇC][ÃA]O|#09|(^|[^A-Z0-9])RS([^A-Z0-9]|$)/},
   {id:'1805973277429998',k:'A',label:'Bruno Rodrigues BM · Conta A',cur:'BRL',termo:{tarot:'AFRODITE',fotos:'FOTOSADV'}},
-  {id:'28205242959171884',k:'S',label:'BM 2738 unlimited · Sócio',cur:'USD'}
+  {id:'28205242959171884',k:'S',label:'BM 2738 unlimited · Sócio',cur:'USD'},
+  {id:'1046337385096736',k:'D',label:'BM Clara · C1',cur:'USD',re:/TAR[ÔO]|AFRODITE|REVOLU/}
 ];
 const $=(id)=>document.getElementById(id);
 const st={periodo:'hoje',conta:'',produto:'tarot',status:'ativos',busca:'',tab:'c',sel:{c:new Map(),s:new Map(),a:new Map()},sort:{c:['gasto',-1],s:['gasto',-1],a:['gasto',-1]}};
@@ -500,8 +502,24 @@ function render(){
   if(!arr.length)tb.append(el('tr',null,el('td',{class:'empty l',colspan:String(colsAtivas().length)},data.erros.length?'Sem dados. Veja o aviso acima.':(st.status==='ativos'?'Nada ativo agora. Troque para "Todos" para ver os pausados.':'Nada encontrado com estes filtros.'))));
   // tiles
   const T=calc(tot);
-  $('t-gasto').textContent=brl(T.gasto);$('t-fat').textContent=st.produto==='tarot'?brl(T.fat):'—';$('t-roas').textContent=st.produto==='tarot'?x2(T.roas):'—';
-  $('t-vendas').textContent=st.produto==='tarot'?int(T.vendas):'—';$('t-cpa').textContent=st.produto==='tarot'?brl(T.cpa):'—';$('t-leads').textContent=st.produto==='tarot'?int(T.leads):'—';
+  // Resumo do período: sem conta/seleção/busca, mostra a operação inteira (Mercado Pago + gasto Meta e TikTok), igual ao caixa.
+  const cf=data.conf, geral=st.produto==='tarot'&&cf&&!cf.erro&&!st.conta&&!st.busca.trim()&&!st.sel.c.size&&!st.sel.s.size&&!st.sel.a.size;
+  const D_=(id,t)=>{$(id+'-d').textContent=t||'';};
+  if(geral){
+    const gMeta=[...data.C.values()].reduce((s,c)=>s+c.m.gasto,0), gTT=+cf.tt_gasto||0, g=gMeta+gTT;
+    const leads=[...data.C.values()].reduce((s,c)=>s+c.m.leads,0);
+    $('t-gasto').textContent=brl(g);D_('t-gasto','Meta '+brl(gMeta)+(gTT?' + TikTok '+brl(gTT):'')+' · Taboola fora');
+    $('t-fat').textContent=brl(cf.mp_v);D_('t-fat','Mercado Pago · todas as origens');
+    $('t-roas').textContent=x2(g?cf.mp_v/g:null);$('t-roas').className='v '+(g&&cf.mp_v/g>=1?'good':g?'bad':'');D_('t-roas','faturamento ÷ gasto total · anúncios Meta: '+x2(T.gasto?T.fat/T.gasto:null));
+    $('t-vendas').textContent=int(cf.mp_n);D_('t-vendas',int(data.rN)+' vieram de anúncios Meta');
+    $('t-cpa').textContent=brl(cf.mp_n?g/cf.mp_n:null);D_('t-cpa','gasto total ÷ vendas');
+    $('t-leads').textContent=int(leads);D_('t-leads','primeira mensagem vinda de anúncio');
+  } else {
+    $('t-gasto').textContent=brl(T.gasto);D_('t-gasto',st.conta||st.sel.c.size||st.sel.s.size||st.busca.trim()?'só o filtrado':'');
+    $('t-fat').textContent=st.produto==='tarot'?brl(T.fat):'—';D_('t-fat',st.produto==='tarot'?'vendas ligadas a estes anúncios':'');
+    $('t-roas').textContent=st.produto==='tarot'?x2(T.roas):'—';$('t-roas').className='v';D_('t-roas','');
+    $('t-vendas').textContent=st.produto==='tarot'?int(T.vendas):'—';D_('t-vendas','');$('t-cpa').textContent=st.produto==='tarot'?brl(T.cpa):'—';D_('t-cpa','');$('t-leads').textContent=st.produto==='tarot'?int(T.leads):'—';D_('t-leads','');
+  }
   renderConf();
   const avisos=[...data.erros]; if(data.realErr)avisos.push('Vendas reais: '+data.realErr);
   const quando=data.at.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
