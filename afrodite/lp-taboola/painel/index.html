@@ -52,6 +52,8 @@ button:focus-visible,select:focus-visible,input:focus-visible,a:focus-visible{ou
 .chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60vw}
 .chip button{border:0;background:none;color:var(--muted);cursor:pointer;font-size:15px;line-height:1;padding:0 4px}
 .conf{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:baseline;font-size:12.5px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 12px}.conf b{font-variant-numeric:tabular-nums}.conf .ok{color:#2e9d5b;font-weight:700}.conf .dif{color:#d9822b;font-weight:700}.conf .nota{flex-basis:100%;color:var(--muted);font-size:11.5px}
+#toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,40px);opacity:0;background:#2e9d5b;color:#fff;font-weight:700;padding:10px 16px;border-radius:999px;transition:.3s;z-index:50;pointer-events:none}#toast.on{opacity:1;transform:translate(-50%,0)}
+.aviso-bid{margin:8px 0 0;padding:8px 10px;border-radius:8px;background:rgba(217,130,43,.15);color:#d9822b;font-size:13px;font-weight:600}
 .status{font-size:12.5px;color:var(--muted);min-height:18px}
 .status.err{color:var(--bad)}
 .tablebox{overflow-x:auto;background:var(--panel);border:1px solid var(--line);border-radius:10px}
@@ -178,7 +180,7 @@ dialog::backdrop{background:rgba(10,6,16,.45)}
   </div>
 </dialog>
 
-<style>#f-produto{display:none!important}.ed button{display:none!important}.sw{pointer-events:none;opacity:.55}</style>
+<style>#f-produto{display:none!important}</style>
 <script>
 (function(){
   async function post(b){const r=await fetch('/painel/api/d',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(b),credentials:'include'});const j=await r.json().catch(()=>({erro:'resposta inválida'}));if(r.status===401)throw new Error('Login expirado. Recarregue a página.');return j;}
@@ -186,9 +188,10 @@ dialog::backdrop{background:rgba(10,6,16,.45)}
     async callTool(server,tool,args){
       if(tool==='consultar'){return {payload:await post({tipo:'meta',caminho:args.caminho,parametros:args.parametros||{}})};}
       if(tool==='execute_sql'){const q=String(args.query||'');const ds=[...q.matchAll(/date '(\d{4}-\d{2}-\d{2})'/g)].map(m=>m[1]);
-        const j=await post({tipo:/mp_n/.test(q)?'conf':'vendas',d1:ds[0],d2:ds[1]||ds[0]});if(j.erro)throw new Error(j.erro);
+        const j=await post(/\/\*pulse\*\//.test(q)?{tipo:'pulse'}:{tipo:/mp_n/.test(q)?'conf':'vendas',d1:ds[0],d2:ds[1]||ds[0]});if(j.erro)throw new Error(j.erro);
         return {payload:{result:'<untrusted-data-a1>'+JSON.stringify(j.rows||[])+'</untrusted-data-a1>'}};}
-      throw new Error('Pausar, orçamento e lance só pelo painel do Claude. Este link é só leitura.');
+      if(['pausar','ativar','alterar_orcamento','alterar_lance'].includes(tool)){const j=await post({tipo:'acao',tool,args});if(j&&j.erro)throw new Error(j.erro);return {payload:j};}
+      throw new Error('Ação não disponível neste link.');
     },
     async invalidate(){}
   };
@@ -316,6 +319,7 @@ async function carregar(){
   const conf=st.produto==='tarot'?await pConf:null;
   refresh=false;
   if(seq!==loadSeq)return;
+  lastRes=res;
   montar(res,real,per,d1,d2,conf);
 }
 
@@ -409,7 +413,7 @@ function render(){
   const avisos=[...data.erros]; if(data.realErr)avisos.push('Vendas reais: '+data.realErr);
   const quando=data.at.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'});
   const per=data.d1===data.d2?data.d1.split('-').reverse().join('/'):data.d1.split('-').reverse().slice(0,2).join('/')+' a '+data.d2.split('-').reverse().slice(0,2).join('/');
-  $('updated').textContent='Período '+per+' · atualizado às '+quando+' · atualiza sozinho a cada 3 min';
+  $('updated').textContent='Período '+per+' · atualizado às '+quando+' · atualiza sozinho a cada 5 min e quando cai venda';
   setStatus(avisos.length?avisos.join(' · '):'',!!avisos.length);
 }
 function renderConf(){
@@ -490,13 +494,14 @@ function traduz(e){return({PAUSED:'Pausado',CAMPAIGN_PAUSED:'Campanha pausada',A
 let pend=null;
 function acao(tipo,r){
   const d=$('dlg'), nome=curto(r.name), niv=NIVEL[r.lvl], cur=r.acc.cur==='USD'?'US$':'R$';
-  pend={tipo,r};
+  pend={tipo,r};for(const w of document.querySelectorAll('.aviso-bid'))w.remove();
   $('d-res').hidden=true;$('d-ok').disabled=false;$('d-ok').textContent='Confirmar';$('d-cancel').textContent='Cancelar';
   $('d-val').value='';$('d-aut').value='';$('d-val-wrap').hidden=true;$('d-aut-wrap').hidden=true;$('d-pedido-wrap').open=!mcp;
   $('d-ok').className='btn primary';
   if(tipo==='pausar'){$('d-title').textContent='Pausar '+niv+'?';$('d-msg').textContent='Pausar “'+nome+'” ('+(r.acc.nome||r.acc.label)+')?';$('d-ok').className='btn danger';$('d-ok').textContent='Pausar';}
   if(tipo==='ativar'){$('d-title').textContent='Ativar '+niv+'?';$('d-msg').textContent='Ativar “'+nome+'” ('+(r.acc.nome||r.acc.label)+')? Volta a gastar.';$('d-aut-wrap').hidden=false;$('d-ok').textContent='Ativar';}
   if(tipo==='orcamento'){$('d-title').textContent='Orçamento diário';$('d-msg').textContent='“'+nome+'”. Hoje: '+money(r.budget,r.acc.cur)+' por dia.';$('d-val-wrap').hidden=false;$('d-val-hint').textContent='('+cur+' por dia)';$('d-val').value=r.budget;}
+  if(tipo==='lance'&&r.lvl==='c'&&r.bids.length>1&&Math.min(...r.bids)!==Math.max(...r.bids)){setTimeout(()=>{const w=el('p',{class:'aviso-bid',text:'⚠ Atenção: os '+r.bids.length+' conjuntos desta campanha têm lances diferentes ('+money(Math.min(...r.bids),r.acc.cur)+' a '+money(Math.max(...r.bids),r.acc.cur)+'). Todos vão ficar com o MESMO valor. Para mudar só um, use a aba Conjuntos.'});$('d-msg').after(w);},0);}
   if(tipo==='lance'){const atual=r.lvl==='s'?r.bid:Math.min(...r.bids);$('d-title').textContent='Bid cap';$('d-msg').textContent='“'+nome+'”. Hoje: '+(r.lvl==='s'?money(r.bid,r.acc.cur):money(Math.min(...r.bids),r.acc.cur)+(r.bids.length>1?' a '+money(Math.max(...r.bids),r.acc.cur)+' em '+r.bids.length+' conjuntos (o novo valor vale para todos)':''))+'.';$('d-val-wrap').hidden=false;$('d-val-hint').textContent='('+cur+')';$('d-val').value=atual;}
   atualizaDialogo();
   if(!d.open)d.showModal();
@@ -576,10 +581,30 @@ function montaContas(){const s=$('f-conta');const v=st.conta;s.replaceChildren(e
 $('f-conta').addEventListener('change',(e)=>{st.conta=e.target.value;st.sel.c.clear();st.sel.s.clear();save();render();carregar();});
 let bt=null;$('f-busca').addEventListener('input',(e)=>{clearTimeout(bt);bt=setTimeout(()=>{st.busca=e.target.value;render();},150);});
 $('b-atualizar').addEventListener('click',()=>{refresh=true;carregar();});
+// venda nova: confere a cada 20 s se entrou Pix pago hoje; se entrou, recarrega só as vendas
+let pulso=null,lastRes=null;
+async function checaVenda(){
+  if(document.hidden||!mcp||st.produto!=='tarot'||!data||st.periodo==='ontem')return;
+  try{
+    const r=await mcp.callTool(SB,'execute_sql',{project_id:SB_PROJ,query:"select /*pulse*/ count(*)::int n, coalesce(sum(valor),0)::float v, to_char(max(coalesce(pago_em,criado_em)) at time zone 'America/Sao_Paulo','YYYY-MM-DD HH24:MI:SS') ult from tarot_pedidos where status='pago' and valor>0 and (coalesce(pago_em,criado_em) at time zone 'America/Sao_Paulo')::date=(now() at time zone 'America/Sao_Paulo')::date"},{cache:false});
+    const x=(linhasSupabase({answer:r.payload!==undefined?r.payload:r})||[])[0]; if(!x)return;
+    const novo=x.n+'|'+x.ult;
+    if(pulso&&novo!==pulso.k&&lastRes){
+      const dv=(+x.v)-(+pulso.v||0);
+      const [d1,d2]=faixa(st.periodo); refresh=true;
+      const [real,conf]=await Promise.all([vendasReais(d1,d2).catch(e=>({erro:errTxt(e)})),conferencia(d1,d2).catch(e=>({erro:errTxt(e)}))]);
+      refresh=false; montar(lastRes,real,st.periodo,d1,d2,conf);
+      aviso('💰 Venda nova'+(dv>0?' de '+brl(dv):'')+' às '+String(x.ult).slice(11,16));
+    }
+    pulso={k:novo,v:x.v};
+  }catch(e){}
+}
+function aviso(t){let b=document.getElementById('toast');if(!b){b=el('div',{id:'toast'});document.body.append(b);}b.textContent=t;b.classList.add('on');clearTimeout(b._t);b._t=setTimeout(()=>b.classList.remove('on'),6000);}
+setInterval(checaVenda,20e3);
 // atualização automática: a cada 3 min com a aba aberta, e ao voltar para a aba
 let ultimaCarga=Date.now();
 function autoAtualiza(){if(document.hidden||!mcp)return;const d=document.querySelector('dialog[open]');if(d)return;ultimaCarga=Date.now();refresh=true;carregar();}
-setInterval(()=>{if(Date.now()-ultimaCarga>=3*60e3)autoAtualiza();},30e3);
+setInterval(()=>{if(Date.now()-ultimaCarga>=5*60e3)autoAtualiza();},30e3);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaCarga>60e3)autoAtualiza();});
 for(const b of document.querySelectorAll('.tabs button'))b.addEventListener('click',()=>{st.tab=b.dataset.t;render();});
 
