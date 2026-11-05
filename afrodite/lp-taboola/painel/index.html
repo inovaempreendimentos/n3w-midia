@@ -89,6 +89,11 @@ tr.total td.col-sw,tr.total td.col-name{background:var(--accent-soft)}
 .empty{padding:28px 12px;text-align:center;color:var(--muted)}
 .note{font-size:12px;color:var(--muted);max-width:75ch}
 dialog{border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--ink);padding:0;width:min(440px,calc(100vw - 32px))}
+.dlg-cols{width:min(860px,calc(100vw - 24px))}.dc-head{padding:14px 16px 8px}.dc-head h2{margin:0 0 4px;font-size:18px}.dc-body{display:grid;grid-template-columns:1fr 260px;gap:14px;padding:0 16px;max-height:65vh;overflow:auto}
+.dc-lista fieldset{border:1px solid var(--line);border-radius:8px;margin:0 0 10px;padding:6px 10px}.dc-lista legend{font-size:12px;color:var(--muted);padding:0 4px}.dc-lista label{display:inline-flex;gap:6px;align-items:center;width:49%;font-size:13px;padding:3px 0;cursor:pointer}
+.dc-ordem h3{font-size:12px;color:var(--muted);margin:0 0 6px;text-transform:uppercase}.dc-ordem ol{margin:0;padding-left:20px;font-size:13px}.dc-ordem li{display:flex;justify-content:space-between;gap:6px;padding:2px 0}.dc-ordem li button{font:inherit;font-size:12px;border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:5px;padding:0 6px;cursor:pointer}
+.dc-foot{display:flex;justify-content:space-between;padding:12px 16px}th.arrastando{opacity:.4}th.alvo{box-shadow:inset 3px 0 0 #b68cf0}th[draggable=true]{cursor:grab}
+@media (max-width:640px){.dc-body{grid-template-columns:1fr}.dc-lista label{width:100%}}
 dialog::backdrop{background:rgba(10,6,16,.45)}
 .dlg{padding:16px;display:flex;flex-direction:column;gap:10px}
 .dlg h2{font-family:var(--font-display);font-weight:600;font-size:18px;margin:0}
@@ -128,6 +133,7 @@ dialog::backdrop{background:rgba(10,6,16,.45)}
       <button data-v="todos" aria-pressed="false">Todos</button>
     </div>
     <input type="search" id="f-busca" placeholder="Buscar pelo nome" aria-label="Buscar pelo nome">
+    <button class="btn" id="b-colunas" type="button">Colunas</button>
     <button class="btn" id="b-atualizar" type="button">Atualizar</button>
   </div>
 
@@ -155,6 +161,11 @@ dialog::backdrop{background:rgba(10,6,16,.45)}
   <p class="note">Leads reais = primeira mensagem no WhatsApp vinda do anúncio. Vendas reais = pedidos pagos do Tarô, ligados ao anúncio que trouxe a pessoa, sem testadores. Conta do sócio em US$; totais em R$ (US$ × 5,55). Pausar e reduzir é livre. Ativar e aumentar pedem a frase de autorização do dono.</p>
 </div>
 
+<dialog id="dlg-cols" class="dlg-cols">
+  <div class="dc-head"><h2>Colunas</h2><span class="dim">Marque o que quer ver. Use ↑ ↓ ou arraste o título da coluna na tabela para mudar a ordem.</span></div>
+  <div class="dc-body"><div id="dc-lista" class="dc-lista"></div><div class="dc-ordem"><h3>Ordem</h3><ol id="dc-ordem"></ol></div></div>
+  <div class="dc-foot"><button class="btn" id="dc-padrao" type="button">Voltar ao padrão</button><button class="btn primary" id="dc-ok" type="button">Pronto</button></div>
+</dialog>
 <dialog id="dlg">
   <div class="dlg">
     <h2 id="d-title">Confirmar</h2>
@@ -212,7 +223,7 @@ const $=(id)=>document.getElementById(id);
 const st={periodo:'hoje',conta:'',produto:'tarot',status:'ativos',busca:'',tab:'c',sel:{c:new Map(),s:new Map()},sort:{c:['gasto',-1],s:['gasto',-1],a:['gasto',-1]}};
 try{const s=JSON.parse(localStorage.getItem('ctrl-anuncios')||'{}');if(s.periodo)st.periodo=s.periodo;if(s.status)st.status=s.status;if(typeof s.conta==='string')st.conta=s.conta;}catch(e){}
 const save=()=>{try{localStorage.setItem('ctrl-anuncios',JSON.stringify({periodo:st.periodo,status:st.status,conta:st.conta}))}catch(e){}};
-let mcp=null, data=null, loadSeq=0, refresh=false;
+let mcp=null, data=null, loadSeq=0, refresh=false; const ultimoBom=new Map();
 
 // ---------- formato
 const nf0=new Intl.NumberFormat('pt-BR',{maximumFractionDigits:0});
@@ -289,7 +300,7 @@ async function carregaConta(acc,per){
       graphAll('act_'+acc.id+'/campaigns',{fields:'id,name,status,effective_status,daily_budget,bid_strategy',limit:200,...cf},2),
       graphAll('act_'+acc.id+'/adsets',{fields:'id,name,campaign_id,status,effective_status,daily_budget,bid_amount,bid_strategy',limit:500,...pf},3),
       graphAll('act_'+acc.id+'/ads',{fields:'id,name,adset_id,campaign_id,status,effective_status',limit:500,...pf},4),
-      graphAll('act_'+acc.id+'/insights',{level:'ad',fields:'ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,spend,impressions,inline_link_clicks,actions,action_values',limit:500,...metaPeriodo(per),...pf},4)
+      graphAll('act_'+acc.id+'/insights',{level:'ad',fields:'ad_id,ad_name,adset_id,adset_name,campaign_id,campaign_name,spend,impressions,reach,clicks,inline_link_clicks,outbound_clicks,actions,action_values,video_thruplay_watched_actions,video_p25_watched_actions,video_p50_watched_actions,video_p75_watched_actions,video_p100_watched_actions',limit:500,...metaPeriodo(per),...pf},4)
     ]);
     let keep=(name)=>true;
     if(acc.re)keep=(name)=>acc.re.test(String(name||'').toUpperCase());
@@ -304,8 +315,8 @@ async function carregaConta(acc,per){
 }
 
 const act=(arr,t)=>{if(!arr)return 0;let s=0;for(const a of arr)if(a.action_type===t)s+=+a.value||0;return s;};
-const zero=()=>({gasto:0,gastoOrig:0,imp:0,clk:0,conv:0,pixC:0,pixV:0,leads:0,vendas:0,fat:0});
-function soma(a,b){for(const k in b)a[k]+=b[k];}
+const zero=()=>({gasto:0,gastoOrig:0,imp:0,reach:0,clkAll:0,clk:0,out:0,conv:0,pixC:0,pixV:0,thru:0,p25:0,p50:0,p75:0,p100:0,leads:0,vendas:0,fat:0,act:{},val:{}});
+function soma(a,b){for(const k in b){if(k==='act'||k==='val'){for(const t in b[k])a[k][t]=(a[k][t]||0)+b[k][t];}else a[k]+=b[k];}}
 
 async function carregar(){
   if(!mcp)return;
@@ -315,6 +326,10 @@ async function carregar(){
   const pReal=st.produto==='tarot'?vendasReais(d1,d2).catch(e=>({erro:errTxt(e)})):Promise.resolve(new Map());
   const pConf=st.produto==='tarot'?conferencia(d1,d2).catch(e=>({erro:errTxt(e)})):null;
   const res=await Promise.all(accs.map(a=>carregaConta(a,per)));
+  // se a Meta limitar uma conta (código 17), reaproveita os últimos dados dela neste período
+  for(let i=0;i<res.length;i++){const r=res[i],k=r.acc.id+'|'+per;
+    if(!r.erro)ultimoBom.set(k,{r,at:Date.now()});
+    else if(/código 17|limitou/.test(r.erro)&&ultimoBom.has(k)){const u=ultimoBom.get(k);res[i]={...u.r,erro:null,aviso:(r.acc.nome||r.acc.label)+': Meta limitou as consultas; mostrando os dados de '+new Date(u.at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.'};}}
   const real=await pReal;
   const conf=st.produto==='tarot'?await pConf:null;
   refresh=false;
@@ -324,11 +339,12 @@ async function carregar(){
 }
 
 function montar(res,real,per,d1,d2,conf){
-  const C=new Map(),S=new Map(),A=new Map(); const erros=[];
+  const C=new Map(),S=new Map(),A=new Map(); const erros=[]; const evTypes=new Set();
   const realErr=real&&real.erro?real.erro:null; const R=real instanceof Map?real:new Map();
   for(const r of res){
     const acc=r.acc, fx=acc.cur==='USD'?FX:1;
     if(r.erro){erros.push((acc.nome||acc.label)+': '+r.erro);continue;}
+    if(r.aviso)erros.push(r.aviso);
     for(const c of r.camps)C.set(c.id,{lvl:'c',id:c.id,name:c.name,acc,status:c.status,eff:c.effective_status,budget:c.daily_budget!=null?+c.daily_budget/100:null,bidStrat:c.bid_strategy,bids:[],m:zero()});
     for(const s of r.sets){S.set(s.id,{lvl:'s',id:s.id,name:s.name,acc,campaign_id:s.campaign_id,status:s.status,eff:s.effective_status,budget:s.daily_budget!=null?+s.daily_budget/100:null,bid:s.bid_amount!=null?+s.bid_amount/100:null,bidStrat:s.bid_strategy,m:zero()});
       const c=C.get(s.campaign_id); if(c&&s.bid_amount!=null)c.bids.push(+s.bid_amount/100);}
@@ -337,14 +353,19 @@ function montar(res,real,per,d1,d2,conf){
       if(!S.has(i.adset_id))S.set(i.adset_id,{lvl:'s',id:i.adset_id,name:i.adset_name,acc,campaign_id:i.campaign_id,status:'?',eff:'?',budget:null,bid:null,m:zero()});
       if(!A.has(i.ad_id))A.set(i.ad_id,{lvl:'a',id:i.ad_id,name:i.ad_name,acc,campaign_id:i.campaign_id,adset_id:i.adset_id,status:'?',eff:'?',m:zero()});
       const g=+i.spend||0;
-      const m={gasto:g*fx,gastoOrig:g,imp:+i.impressions||0,clk:+i.inline_link_clicks||0,conv:act(i.actions,'onsite_conversion.messaging_conversation_started_7d'),pixC:act(i.actions,'omni_purchase'),pixV:act(i.action_values,'omni_purchase')*fx,leads:0,vendas:0,fat:0};
+      const m=zero(); m.gasto=g*fx; m.gastoOrig=g; m.imp=+i.impressions||0; m.reach=+i.reach||0; m.clkAll=+i.clicks||0; m.clk=+i.inline_link_clicks||0; m.out=act(i.outbound_clicks,'outbound_click');
+      for(const a of i.actions||[])m.act[a.action_type]=(m.act[a.action_type]||0)+(+a.value||0);
+      for(const a of i.action_values||[])m.val[a.action_type]=(m.val[a.action_type]||0)+(+a.value||0)*fx;
+      m.conv=m.act['onsite_conversion.messaging_conversation_started_7d']||0; m.pixC=m.act['omni_purchase']||0; m.pixV=m.val['omni_purchase']||0;
+      m.thru=act(i.video_thruplay_watched_actions,'video_view'); m.p25=act(i.video_p25_watched_actions,'video_view'); m.p50=act(i.video_p50_watched_actions,'video_view'); m.p75=act(i.video_p75_watched_actions,'video_view'); m.p100=act(i.video_p100_watched_actions,'video_view');
+      for(const t in m.act)evTypes.add(t);
       soma(A.get(i.ad_id).m,m);
     }
   }
   for(const [id,a] of A){const x=R.get(id); if(x){a.m.leads+=x.leads;a.m.vendas+=x.vendas;a.m.fat+=x.fat;}
     const s=S.get(a.adset_id); if(s)soma(s.m,a.m); const c=C.get(a.campaign_id); if(c)soma(c.m,a.m);}
   let rN=0,rV=0;for(const [id,x] of R){rN+=x.vendas;rV+=x.fat;}
-  data={C,S,A,per,d1,d2,erros,realErr,conf,rN,rV,contasCarregadas:res.filter(r=>!r.erro).map(r=>r.acc.id),at:new Date()};
+  data={C,S,A,per,d1,d2,erros,realErr,conf,evTypes:[...evTypes].sort(),rN,rV,contasCarregadas:res.filter(r=>!r.erro).map(r=>r.acc.id),at:new Date()};
   render();
 }
 
@@ -364,14 +385,48 @@ function linhas(t){
   arr.sort((a,b)=>{const x=val(a),y=val(b);return x<y?-dir:x>y?dir:0;});
   return arr;
 }
-function calc(r){const m=r.m;return{nome:r.name,conta:nomeConta(r.acc),orc:r.budget,bid:r.lvl==='s'?r.bid:r.lvl==='c'&&r.bids.length?Math.min(...r.bids):null,gasto:m.gasto,imp:m.imp,clk:m.clk,ctr:m.imp?m.clk/m.imp:null,cpc:m.clk?m.gasto/m.clk:null,conv:m.conv,leads:m.leads,vendas:m.vendas,cpa:m.vendas?m.gasto/m.vendas:null,fat:m.fat,roas:m.gasto?m.fat/m.gasto:null,roasPix:m.gasto?m.pixV/m.gasto:null};}
-
-const COLS=[
-  {k:'sw',t:'',cls:'col-sw l',nosort:1},{k:'nome',t:'Nome',cls:'col-name l'},{k:'conta',t:'Conta',cls:'l'},
-  {k:'orc',t:'Orçamento'},{k:'bid',t:'Bid cap'},{k:'gasto',t:'Gasto'},{k:'imp',t:'Impr.'},{k:'clk',t:'Cliques'},
-  {k:'ctr',t:'CTR'},{k:'cpc',t:'CPC'},{k:'conv',t:'Conversas'},{k:'leads',t:'Leads reais'},{k:'vendas',t:'Vendas reais'},
-  {k:'cpa',t:'CPA'},{k:'fat',t:'Fatur. real'},{k:'roas',t:'ROAS real'},{k:'roasPix',t:'ROAS pixel'}
+const dv=(a,b)=>b?a/b:null;
+const A_=(m,t)=>m.act[t]||0;
+// catálogo de métricas: k, nome, grupo, formato (fx = dinheiro na moeda da conta; brl; int; pct; x; xr = ROAS real colorido; n2), v = cálculo
+const MET=[
+ {k:'conta',t:'Conta',g:'Configuração',cls:'l'},{k:'orc',t:'Orçamento',g:'Configuração'},{k:'bid',t:'Bid cap',g:'Configuração'},
+ {k:'gasto',t:'Gasto',g:'Entrega',f:'fx',v:m=>m.gasto},{k:'imp',t:'Impressões',g:'Entrega',f:'int',v:m=>m.imp},{k:'reach',t:'Alcance (soma)',g:'Entrega',f:'int',v:m=>m.reach},
+ {k:'freq',t:'Frequência',g:'Entrega',f:'n2',v:m=>dv(m.imp,m.reach)},{k:'cpm',t:'CPM',g:'Entrega',f:'fx',v:m=>m.imp?m.gasto/m.imp*1000:null},
+ {k:'clkAll',t:'Cliques (todos)',g:'Cliques',f:'int',v:m=>m.clkAll},{k:'ctrAll',t:'CTR (todos)',g:'Cliques',f:'pct',v:m=>dv(m.clkAll,m.imp)},{k:'cpcAll',t:'CPC (todos)',g:'Cliques',f:'fx',v:m=>dv(m.gasto,m.clkAll)},
+ {k:'clk',t:'Cliques no link',g:'Cliques',f:'int',v:m=>m.clk},{k:'ctr',t:'CTR link',g:'Cliques',f:'pct',v:m=>dv(m.clk,m.imp)},{k:'cpc',t:'CPC link',g:'Cliques',f:'fx',v:m=>dv(m.gasto,m.clk)},
+ {k:'out',t:'Cliques de saída',g:'Cliques',f:'int',v:m=>m.out},{k:'lpv',t:'Visualizações da página',g:'Cliques',f:'int',v:m=>A_(m,'landing_page_view')},{k:'cpLpv',t:'Custo por visualização da página',g:'Cliques',f:'fx',v:m=>dv(m.gasto,A_(m,'landing_page_view'))},
+ {k:'conv',t:'Conversas iniciadas',g:'WhatsApp',f:'int',v:m=>m.conv},{k:'cpConv',t:'Custo por conversa',g:'WhatsApp',f:'fx',v:m=>dv(m.gasto,m.conv)},
+ {k:'resp1',t:'Primeira resposta',g:'WhatsApp',f:'int',v:m=>A_(m,'onsite_conversion.messaging_first_reply')},{k:'prof2',t:'Conversas com 2+ mensagens',g:'WhatsApp',f:'int',v:m=>A_(m,'onsite_conversion.messaging_user_depth_2_message_send')},
+ {k:'prof3',t:'Conversas com 3+ mensagens',g:'WhatsApp',f:'int',v:m=>A_(m,'onsite_conversion.messaging_user_depth_3_message_send')},{k:'conexoes',t:'Contatos de mensagem',g:'WhatsApp',f:'int',v:m=>A_(m,'onsite_conversion.total_messaging_connection')},
+ {k:'leadPix',t:'Leads (pixel)',g:'Pixel da Meta',f:'int',v:m=>A_(m,'lead')},{k:'cplPix',t:'Custo por lead (pixel)',g:'Pixel da Meta',f:'fx',v:m=>dv(m.gasto,A_(m,'lead'))},
+ {k:'ckout',t:'Finalizações de compra',g:'Pixel da Meta',f:'int',v:m=>A_(m,'omni_initiated_checkout')},
+ {k:'pixC',t:'Compras (pixel)',g:'Pixel da Meta',f:'int',v:m=>m.pixC},{k:'pixV',t:'Valor das compras (pixel)',g:'Pixel da Meta',f:'fx',v:m=>m.pixV},
+ {k:'cpaPix',t:'CPA (pixel)',g:'Pixel da Meta',f:'fx',v:m=>dv(m.gasto,m.pixC)},{k:'roasPix',t:'ROAS pixel',g:'Pixel da Meta',f:'x',v:m=>dv(m.pixV,m.gasto)},
+ {k:'v3s',t:'Reproduções de 3 s',g:'Vídeo',f:'int',v:m=>A_(m,'video_view')},{k:'hook',t:'Hook rate (3 s ÷ impressões)',g:'Vídeo',f:'pct',v:m=>dv(A_(m,'video_view'),m.imp)},
+ {k:'thru',t:'ThruPlays',g:'Vídeo',f:'int',v:m=>m.thru},{k:'hold',t:'Hold rate (ThruPlay ÷ 3 s)',g:'Vídeo',f:'pct',v:m=>dv(m.thru,A_(m,'video_view'))},
+ {k:'cpThru',t:'Custo por ThruPlay',g:'Vídeo',f:'fx',v:m=>dv(m.gasto,m.thru)},
+ {k:'p25',t:'Vídeo 25%',g:'Vídeo',f:'int',v:m=>m.p25},{k:'p50',t:'Vídeo 50%',g:'Vídeo',f:'int',v:m=>m.p50},{k:'p75',t:'Vídeo 75%',g:'Vídeo',f:'int',v:m=>m.p75},{k:'p100',t:'Vídeo 100%',g:'Vídeo',f:'int',v:m=>m.p100},
+ {k:'eng',t:'Engajamento',g:'Engajamento',f:'int',v:m=>A_(m,'post_engagement')},{k:'reac',t:'Reações',g:'Engajamento',f:'int',v:m=>A_(m,'post_reaction')},
+ {k:'coment',t:'Comentários',g:'Engajamento',f:'int',v:m=>A_(m,'comment')},{k:'compart',t:'Compartilhamentos',g:'Engajamento',f:'int',v:m=>A_(m,'post')},
+ {k:'salvos',t:'Salvamentos',g:'Engajamento',f:'int',v:m=>A_(m,'onsite_conversion.post_save')},
+ {k:'leads',t:'Leads reais',g:'Vendas reais (Jacira + Mercado Pago)',f:'int',real:1,v:m=>m.leads},{k:'cpl',t:'Custo por lead real',g:'Vendas reais (Jacira + Mercado Pago)',f:'fx',real:1,v:m=>dv(m.gasto,m.leads)},
+ {k:'vendas',t:'Vendas reais',g:'Vendas reais (Jacira + Mercado Pago)',f:'int',real:1,v:m=>m.vendas},{k:'cpa',t:'CPA real',g:'Vendas reais (Jacira + Mercado Pago)',f:'fx',real:1,v:m=>dv(m.gasto,m.vendas)},
+ {k:'fat',t:'Faturamento real',g:'Vendas reais (Jacira + Mercado Pago)',f:'brl',real:1,v:m=>m.fat},{k:'roas',t:'ROAS real',g:'Vendas reais (Jacira + Mercado Pago)',f:'xr',real:1,v:m=>dv(m.fat,m.gasto)},
+ {k:'ticket',t:'Ticket médio real',g:'Vendas reais (Jacira + Mercado Pago)',f:'brl',real:1,v:m=>dv(m.fat,m.vendas)},{k:'lucro',t:'Lucro (fatur. − gasto)',g:'Vendas reais (Jacira + Mercado Pago)',f:'brl',real:1,v:m=>m.fat-m.gasto},
+ {k:'txConv',t:'Conversão lead → venda',g:'Vendas reais (Jacira + Mercado Pago)',f:'pct',real:1,v:m=>dv(m.vendas,m.leads)}
 ];
+const MAPMET=new Map(MET.map(x=>[x.k,x]));
+function metDef(k){if(MAPMET.has(k))return MAPMET.get(k);if(k.startsWith('ev:')){const t=k.slice(3);return{k,t:'Evento: '+t,g:'Todos os outros eventos da Meta',f:'int',v:m=>A_(m,t)};}return null;}
+const COLS_PADRAO=['conta','orc','bid','gasto','imp','clk','ctr','cpc','conv','leads','vendas','cpa','fat','roas','roasPix'];
+st.cols=COLS_PADRAO.slice();
+try{const c=JSON.parse(localStorage.getItem('painel-cols-v1')||'null');if(Array.isArray(c)&&c.length)st.cols=c.filter(k=>MAPMET.has(k)||String(k).startsWith('ev:'));}catch(e){}
+const salvaCols=()=>{try{localStorage.setItem('painel-cols-v1',JSON.stringify(st.cols))}catch(e){}};
+function calc(r){const m=r.m;const o={nome:r.name,conta:nomeConta(r.acc),orc:r.budget,bid:r.lvl==='s'?r.bid:r.lvl==='c'&&r.bids&&r.bids.length?Math.min(...r.bids):null};
+  for(const d of MET)if(d.v)o[d.k]=d.v(m);
+  for(const k of st.cols)if(k.startsWith('ev:'))o[k]=metDef(k).v(m);
+  return o;}
+
+function colsAtivas(){return [{k:'sw',t:'',cls:'col-sw l',nosort:1},{k:'nome',t:'Nome',cls:'col-name l'}].concat(st.cols.map(metDef).filter(Boolean));}
 
 function el(tag,attrs,...kids){const e=document.createElement(tag);if(attrs)for(const k in attrs){if(k==='class')e.className=attrs[k];else if(k==='text')e.textContent=attrs[k];else if(k.startsWith('on'))e.addEventListener(k.slice(2),attrs[k]);else e.setAttribute(k,attrs[k]);}for(const c of kids)if(c!=null)e.append(c);return e;}
 function setStatus(t,err){const s=$('status');s.textContent=t;s.classList.toggle('err',!!err);}
@@ -387,9 +442,11 @@ function render(){
   }
   // head
   const tr=el('tr');
+  const COLS=colsAtivas();
   for(const c of COLS){
     const [k,dir]=st.sort[t];
     const th=el('th',{class:c.cls||'',scope:'col'},c.t);
+    if(c.k!=='sw'&&c.k!=='nome'){th.draggable=true;th.title='Arraste para mudar a coluna de lugar';th.addEventListener('dragstart',e=>{e.dataTransfer.setData('text/plain',c.k);th.classList.add('arrastando');});th.addEventListener('dragend',()=>th.classList.remove('arrastando'));th.addEventListener('dragover',e=>{e.preventDefault();th.classList.add('alvo');});th.addEventListener('dragleave',()=>th.classList.remove('alvo'));th.addEventListener('drop',e=>{e.preventDefault();th.classList.remove('alvo');const de=e.dataTransfer.getData('text/plain');if(!de||de===c.k)return;const a=st.cols.filter(x=>x!==de);a.splice(a.indexOf(c.k),0,de);st.cols=a;salvaCols();render();});}
     if(!c.nosort){th.append(el('span',{class:'ar',text:k===c.k?(dir>0?'▲':'▼'):''}));th.addEventListener('click',()=>{const s=st.sort[t];st.sort[t]=s[0]===c.k?[c.k,-s[1]]:[c.k,c.k==='nome'||c.k==='conta'?1:-1];render();});th.setAttribute('aria-sort',k===c.k?(dir>0?'ascending':'descending'):'none');}
     if((c.k==='orc'||c.k==='bid')&&t==='a')th.textContent='';
     tr.append(th);
@@ -404,7 +461,7 @@ function render(){
   if(arr.length)tb.append(linhaTotal(tot,t));
   for(const r of arr)tb.append(linha(r,t));
   if(arr.length>1){const lt=linhaTotal(tot,t);lt.classList.add('tot-baixo');tb.append(lt);}
-  if(!arr.length)tb.append(el('tr',null,el('td',{class:'empty l',colspan:String(COLS.length)},data.erros.length?'Sem dados. Veja o aviso acima.':(st.status==='ativos'?'Nada ativo ou com gasto neste período. Troque para "Todos".':'Nada encontrado com estes filtros.'))));
+  if(!arr.length)tb.append(el('tr',null,el('td',{class:'empty l',colspan:String(colsAtivas().length)},data.erros.length?'Sem dados. Veja o aviso acima.':(st.status==='ativos'?'Nada ativo ou com gasto neste período. Troque para "Todos".':'Nada encontrado com estes filtros.'))));
   // tiles
   const T=calc(tot);
   $('t-gasto').textContent=brl(T.gasto);$('t-fat').textContent=st.produto==='tarot'?brl(T.fat):'—';$('t-roas').textContent=st.produto==='tarot'?x2(T.roas):'—';
@@ -448,13 +505,21 @@ function roasCell(v,real){const td=el('td',{text:x2(v)});if(real&&v!=null&&isFin
 
 function linhaTotal(r,t){
   const c=calc(r);const tr=el('tr',{class:'total'});
-  tr.append(el('td',{class:'col-sw'}),el('td',{class:'col-name l',text:r.name}),el('td',{class:'acc'}),el('td'),el('td'));
-  appendMetrics(tr,c,r);return tr;
+  tr.append(el('td',{class:'col-sw'}),el('td',{class:'col-name l',text:r.name}));
+  for(const k of st.cols){if(k==='conta')tr.append(el('td',{class:'acc'}));else if(k==='orc'||k==='bid')tr.append(el('td'));else tr.append(celula(k,c,r));}
+  return tr;
 }
-function appendMetrics(tr,c,r){
-  const re=st.produto==='tarot';
-  tr.append(cellMoney(c.gasto,r),el('td',{text:int(c.imp)}),el('td',{text:int(c.clk)}),el('td',{text:pct(c.ctr)}),cellMoney(c.cpc,r),el('td',{text:int(c.conv)}),
-    el('td',{text:re?int(c.leads):'—'}),el('td',{text:re?int(c.vendas):'—'}),re?cellMoney(c.cpa,r):el('td',{text:'—'}),el('td',{text:re?brl(c.fat):'—'}),re?roasCell(c.roas,true):el('td',{text:'—'}),roasCell(c.roasPix,false));
+function celula(k,c,r){
+  const d=metDef(k); if(!d)return el('td');
+  if(d.real&&st.produto!=='tarot')return el('td',{text:'—'});
+  const v=c[k];
+  if(d.f==='fx')return cellMoney(v,r);
+  if(d.f==='brl')return el('td',{text:brl(v),class:k==='lucro'&&v!=null?(v>=0?'good':'bad'):''});
+  if(d.f==='pct')return el('td',{text:pct(v)});
+  if(d.f==='x')return roasCell(v,false);
+  if(d.f==='xr')return roasCell(v,true);
+  if(d.f==='n2')return el('td',{text:v==null||!isFinite(v)?'—':nf2.format(v)});
+  return el('td',{text:int(v)});
 }
 const NIVEL={c:'campanha',s:'conjunto',a:'anúncio'};
 function linha(r,t){
@@ -472,19 +537,16 @@ function linha(r,t){
   const lnk='https://adsmanager.facebook.com/adsmanager/manage/'+(r.lvl==='c'?'campaigns':r.lvl==='s'?'adsets':'ads')+'?act='+r.acc.id+'&selected_'+(r.lvl==='c'?'campaign':r.lvl==='s'?'adset':'ad')+'_ids='+r.id;
   meta.append(el('a',{href:lnk,target:'_blank',rel:'noopener',text:'abrir na Meta'}));
   tr.append(el('td',{class:'col-name l name'},nm,meta));
-  tr.append(el('td',{class:'acc',text:nomeConta(r.acc)}));
   // orçamento
   const tdO=el('td');
   if(t!=='a'&&r.budget!=null){tdO.append(el('span',{class:'ed'},money(r.budget,r.acc.cur),el('button',{type:'button','aria-label':'Editar orçamento',text:'editar',onclick:()=>acao('orcamento',r)})));}
   else if(t!=='a')tdO.append(el('span',{class:'dim',text:r.lvl==='s'?'na campanha':'nos conjuntos'}));
-  tr.append(tdO);
   // bid
   const tdB=el('td');
   if(t==='s'&&r.bid!=null)tdB.append(el('span',{class:'ed'},money(r.bid,r.acc.cur),el('button',{type:'button','aria-label':'Editar bid cap',text:'editar',onclick:()=>acao('lance',r)})));
   else if(t==='c'&&r.bids.length){const mn=Math.min(...r.bids),mx=Math.max(...r.bids);tdB.append(el('span',{class:'ed'},mn===mx?money(mn,r.acc.cur):money(mn,r.acc.cur)+'–'+nf2.format(mx),el('button',{type:'button','aria-label':'Editar bid cap de todos os conjuntos',text:'editar',onclick:()=>acao('lance',r)})));}
   else if(t!=='a')tdB.append(el('span',{class:'dim',text:'sem bid'}));
-  tr.append(tdB);
-  appendMetrics(tr,c,r);
+  for(const k of st.cols){if(k==='conta')tr.append(el('td',{class:'acc',text:nomeConta(r.acc)}));else if(k==='orc')tr.append(tdO);else if(k==='bid')tr.append(tdB);else tr.append(celula(k,c,r));}
   return tr;
 }
 function nomeConta(a){return a.label?(a.nome&&a.nome!==a.label?a.label+' · '+a.nome:a.label):'';}
@@ -581,6 +643,20 @@ function montaContas(){const s=$('f-conta');const v=st.conta;s.replaceChildren(e
 $('f-conta').addEventListener('change',(e)=>{st.conta=e.target.value;st.sel.c.clear();st.sel.s.clear();save();render();carregar();});
 let bt=null;$('f-busca').addEventListener('input',(e)=>{clearTimeout(bt);bt=setTimeout(()=>{st.busca=e.target.value;render();},150);});
 $('b-atualizar').addEventListener('click',()=>{refresh=true;carregar();});
+function montaColunas(){
+  const L=$('dc-lista');L.replaceChildren();const grupos=new Map();
+  const todos=MET.concat(((data&&data.evTypes)||[]).map(t=>metDef('ev:'+t)));
+  for(const d of todos){if(!grupos.has(d.g))grupos.set(d.g,[]);grupos.get(d.g).push(d);}
+  for(const [g,ds] of grupos){const fs=el('fieldset',null,el('legend',{text:g}));
+    for(const d of ds){const cb=el('input',{type:'checkbox'});cb.checked=st.cols.includes(d.k);cb.addEventListener('change',()=>{if(cb.checked){if(!st.cols.includes(d.k))st.cols.push(d.k);}else st.cols=st.cols.filter(x=>x!==d.k);salvaCols();montaOrdem();render();});fs.append(el('label',null,cb,el('span',{text:d.t})));}
+    L.append(fs);}
+  montaOrdem();
+}
+function montaOrdem(){const O=$('dc-ordem');O.replaceChildren();st.cols.forEach((k,i)=>{const d=metDef(k);if(!d)return;const mv=(n)=>{const j=i+n;if(j<0||j>=st.cols.length)return;const a=st.cols.slice();[a[i],a[j]]=[a[j],a[i]];st.cols=a;salvaCols();montaOrdem();render();};
+  O.append(el('li',null,el('span',{text:d.t}),el('span',null,el('button',{type:'button','aria-label':'Subir',text:'↑',onclick:()=>mv(-1)}),el('button',{type:'button','aria-label':'Descer',text:'↓',onclick:()=>mv(1)}))));});}
+$('b-colunas').addEventListener('click',()=>{montaColunas();$('dlg-cols').showModal();});
+$('dc-ok').addEventListener('click',()=>$('dlg-cols').close());
+$('dc-padrao').addEventListener('click',()=>{st.cols=COLS_PADRAO.slice();salvaCols();montaColunas();render();});
 // venda nova: confere a cada 20 s se entrou Pix pago hoje; se entrou, recarrega só as vendas
 let pulso=null,lastRes=null;
 async function checaVenda(){
@@ -603,7 +679,7 @@ function aviso(t){let b=document.getElementById('toast');if(!b){b=el('div',{id:'
 setInterval(checaVenda,20e3);
 // atualização automática: a cada 3 min com a aba aberta, e ao voltar para a aba
 let ultimaCarga=Date.now();
-function autoAtualiza(){if(document.hidden||!mcp)return;const d=document.querySelector('dialog[open]');if(d)return;ultimaCarga=Date.now();refresh=true;carregar();}
+function autoAtualiza(){if(document.hidden||!mcp)return;const d=document.querySelector('#dlg[open]');if(d)return;ultimaCarga=Date.now();refresh=true;carregar();}
 setInterval(()=>{if(Date.now()-ultimaCarga>=5*60e3)autoAtualiza();},30e3);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden&&Date.now()-ultimaCarga>60e3)autoAtualiza();});
 for(const b of document.querySelectorAll('.tabs button'))b.addEventListener('click',()=>{st.tab=b.dataset.t;render();});
