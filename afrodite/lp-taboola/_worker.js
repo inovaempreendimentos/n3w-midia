@@ -21,8 +21,20 @@ function pedeLogin() {
   return new Response('Login necessário.', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Painel Taro", charset="UTF-8"', 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
 }
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
+    // (06/11) /zap → link dos anúncios: sem página nenhuma. Gera o código #XXXXX, registra o clique em segundo plano e já abre o WhatsApp do chip verde (302 direto).
+    if (url.pathname === '/zap' || url.pathname === '/zap/') {
+      const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+      const rnd = crypto.getRandomValues(new Uint8Array(5));
+      const cod = [...rnd].map((x) => A[x % A.length]).join('');
+      const q = url.searchParams;
+      const body = JSON.stringify({ codigo: cod, origem: q.get('origem') || 'meta', clid: q.get('fbclid'), campanha: q.get('utm_campaign'), item: q.get('utm_content') || q.get('ad_id'), site: q.get('utm_source') || 'meta', plataforma: q.get('utm_medium') });
+      ctx.waitUntil(fetch('https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/tb-click', { method: 'POST', headers: { 'content-type': 'text/plain' }, body }).catch(() => {}));
+      const num = await rotaChip();
+      const msg = 'Olá! Quero minha leitura de tarô 🔮 #' + cod;
+      return new Response(null, { status: 302, headers: { location: 'https://wa.me/' + num + '?text=' + encodeURIComponent(msg), 'cache-control': 'no-store' } });
+    }
     // (06/11) /w?text=... → sorteia um chip no ar (Painel de Chips) e abre o WhatsApp dele. Chip caiu = sai do sorteio sozinho.
     if (url.pathname === '/w' || url.pathname === '/w/') {
       const num = await rotaChip();
