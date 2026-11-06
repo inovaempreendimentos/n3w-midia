@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Painel de Chips</title>
+<style>
+  :root { --bg:#f7f5f2; --panel:#fff; --fg:#1f1b24; --muted:#6c6573; --line:#e7e2dc; --ok:#1f9d55; --warn:#d99a06; --bad:#d64545; }
+  @media (prefers-color-scheme: dark) { :root { --bg:#141216; --panel:#1d1a21; --fg:#eeeaf1; --muted:#a39dab; --line:#2e2a33; --ok:#3ccf7e; --warn:#f2b632; --bad:#f06a6a; } }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:15px/1.45 system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  main { max-width:1100px; margin:0 auto; padding:20px 16px 48px; }
+  header { display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; }
+  h1 { font-size:1.5rem; margin:0; font-weight:600; }
+  h2 { font-size:1.05rem; margin:28px 0 10px; }
+  .muted { color:var(--muted); font-size:.85rem; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); gap:12px; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; min-width:0; }
+  .top { display:flex; align-items:center; gap:10px; }
+  .luz { width:14px; height:14px; border-radius:50%; flex:none; }
+  .ok{background:var(--ok)} .warn{background:var(--warn)} .bad{background:var(--bad)}
+  .nota { margin-left:auto; font-size:1.6rem; font-variant-numeric:tabular-nums; }
+  .card h3 { margin:0; font-size:1rem; overflow-wrap:anywhere; }
+  ul { list-style:none; margin:8px 0 0; padding:0; font-size:.85rem; display:grid; gap:3px; }
+  li b { display:inline-block; width:1.1em; text-align:center; }
+  li.s-ok b{color:var(--ok)} li.s-warn b{color:var(--warn)} li.s-bad b{color:var(--bad)}
+  li span { color:var(--muted); } li em { color:var(--fg); font-style:normal; }
+  .kpis { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:8px; margin-top:10px; }
+  .kpi { border-top:1px solid var(--line); padding-top:6px; } .kpi div:first-child { font-size:.75rem; color:var(--muted); } .kpi div:last-child { font-size:1.15rem; font-variant-numeric:tabular-nums; }
+  .tbl { overflow-x:auto; background:var(--panel); border:1px solid var(--line); border-radius:12px; }
+  table { border-collapse:collapse; width:100%; font-size:.87rem; }
+  th, td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--line); white-space:nowrap; }
+  th { color:var(--muted); font-weight:500; } td.n { text-align:right; font-variant-numeric:tabular-nums; }
+  .erro { color:var(--bad); }
+</style>
+</head>
+<body>
+<main>
+  <header><h1>Painel de Chips</h1><span class="muted" id="hora">carregando…</span></header>
+  <p class="muted">Atualiza sozinho a cada 60 s. Verde = recebe tráfego · amarelo = atenção · vermelho = fora do sorteio.</p>
+
+  <h2>Monitor de saúde</h2>
+  <div class="grid" id="monitor"></div>
+
+  <h2>De onde vem o tráfego e pra qual chip foi (hoje)</h2>
+  <div class="tbl"><table><thead><tr><th>Conta / BM</th><th>Campanha</th><th>Via</th><th>Chip</th><th class="n">Cliques</th><th class="n">Conversas</th></tr></thead><tbody id="traf"></tbody></table></div>
+
+  <h2>Últimos 7 dias</h2>
+  <div class="tbl"><table><thead><tr><th>Dia</th><th>Conta / BM</th><th>Chip</th><th class="n">Cliques</th><th class="n">Conversas</th></tr></thead><tbody id="traf7"></tbody></table></div>
+
+  <h2>Chips por dia (entradas)</h2>
+  <div class="tbl"><table><thead><tr><th>Dia</th><th>Chip</th><th class="n">Entradas</th><th class="n">Falhas</th></tr></thead><tbody id="hist"></tbody></table></div>
+  <p class="muted" id="erros"></p>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const fmt = (n) => (n == null ? '—' : Number(n).toLocaleString('pt-BR'));
+const brl = (n) => 'R$ ' + Number(n || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const STATUS = { CONNECTED: ['conectado', 'ok'], BANNED: ['banido', 'bad'], FLAGGED: ['sinalizado', 'warn'], RESTRICTED: ['restrito', 'bad'], DISCONNECTED: ['desconectado', 'bad'] };
+function checagens(c) {
+  const agora = Date.now(), h = new Date().getHours();
+  const minIn = c.ultima_entrada ? (agora - new Date(c.ultima_entrada)) / 60000 : null;
+  const minMeta = c.saude_em ? (agora - new Date(c.saude_em)) / 60000 : null;
+  const sai2 = c.saidas_2h || 0, taxa = sai2 >= 5 ? c.falhas_2h / sai2 : 0;
+  const uso = c.teto_dia ? c.novos_hoje / c.teto_dia : 0;
+  const st = STATUS[c.status] || [c.status, 'warn'];
+  const q = { GREEN: ['verde', 'ok'], YELLOW: ['amarela', 'warn'], RED: ['vermelha', 'bad'] }[c.qualidade] || ['ainda sem nota (chip novo)', 'ok'];
+  return [
+    ['Status na Meta', st[0], st[1]],
+    ['Qualidade', q[0], q[1]],
+    ['Nome de exibição', c.nome_status === 'APPROVED' ? 'aprovado' : c.nome_status === 'DECLINED' ? 'recusado' : 'em análise', c.nome_status === 'DECLINED' ? 'warn' : 'ok'],
+    ['Recebendo mensagens', minIn == null ? 'nenhuma ainda' : minIn < 60 ? 'última há ' + Math.round(minIn) + ' min' : 'última há ' + Math.round(minIn / 60) + ' h', minIn == null ? 'warn' : (minIn > 90 && h >= 9 && h <= 23 ? 'warn' : 'ok')],
+    ['Envios sem falha', sai2 >= 5 ? Math.round((1 - taxa) * 100) + '% ok nas últimas 2 h' : 'pouco envio nas últimas 2 h', taxa > 0.2 ? 'bad' : taxa > 0.05 ? 'warn' : 'ok'],
+    ['Proativas sob controle', fmt(c.proativas_hoje) + ' hoje', c.proativas_hoje > 150 ? 'bad' : c.proativas_hoje > 60 ? 'warn' : 'ok'],
+    ['Abaixo do teto', fmt(c.novos_hoje) + ' de ' + fmt(c.teto_dia) + ' conversas', uso > 1.2 ? 'bad' : uso > 0.9 ? 'warn' : 'ok'],
+    ['Leitura da Meta', minMeta == null ? 'sem leitura' : 'há ' + Math.round(minMeta) + ' min', minMeta == null || minMeta > 20 ? 'warn' : 'ok'],
+  ];
+}
+function desenha(d) {
+  $('hora').textContent = 'atualizado ' + new Date(d.agora).toLocaleTimeString('pt-BR');
+  const ord = { bad: 0, warn: 1, ok: 2 };
+  const chips = [...d.chips].sort((a, b) => (b.ativo - a.ativo));
+  $('monitor').innerHTML = chips.map((c) => {
+    const ck = checagens(c);
+    const pior = ck.reduce((a, x) => (ord[x[2]] < ord[a] ? x[2] : a), 'ok');
+    const nota = Math.round(100 * ck.reduce((s, x) => s + (x[2] === 'ok' ? 1 : x[2] === 'warn' ? 0.5 : 0), 0) / ck.length);
+    return `<article class="card"><div class="top"><span class="luz ${pior}"></span><h3>${esc(c.nome || c.numero)}</h3><span class="nota">${nota}</span></div>
+      <div class="muted">${esc(c.numero)} · ${c.no_sorteio && c.ativo ? 'no sorteio do link' : 'fora do sorteio'}${c.tier ? ' · limite ' + esc(String(c.tier).replace('TIER_', '')) + '/dia' : ''}<br>BM ${esc(c.bm)} · ${esc(c.waba_nome || c.waba_id || '')}</div>
+      <ul>${ck.map(([r, v, s]) => `<li class="s-${s}"><b>${s === 'ok' ? '✓' : s === 'warn' ? '!' : '✕'}</b><span>${esc(r)}: <em>${esc(v)}</em></span></li>`).join('')}</ul>
+      <div class="kpis"><div class="kpi"><div>Novas hoje</div><div>${fmt(c.novos_hoje)}</div></div><div class="kpi"><div>Mensagens in</div><div>${fmt(c.entradas_hoje)}</div></div><div class="kpi"><div>Vendas</div><div>${fmt(c.vendas_hoje)}</div></div><div class="kpi"><div>Faturado</div><div>${brl(c.faturado_hoje)}</div></div></div></article>`;
+  }).join('');
+  const hoje = d.trafego.length ? d.trafego[0].dia : null;
+  const th = d.trafego.filter((r) => r.dia === hoje);
+  $('traf').innerHTML = th.length ? th.map((r) => `<tr><td>${esc(r.conta)}</td><td>${esc(r.campanha)}</td><td>${esc(r.via)}</td><td>${esc(r.chip)}</td><td class="n">${fmt(r.cliques)}</td><td class="n">${fmt(r.conversas)}</td></tr>`).join('') : '<tr><td colspan="6" class="muted">Nenhum clique roteado hoje ainda.</td></tr>';
+  const ag = {};
+  for (const r of d.trafego) { const k = r.dia + '|' + r.conta + '|' + r.chip; ag[k] = ag[k] || { ...r, cliques: 0, conversas: 0 }; ag[k].cliques += r.cliques; ag[k].conversas += r.conversas; }
+  $('traf7').innerHTML = Object.values(ag).map((r) => `<tr><td>${esc(r.dia)}</td><td>${esc(r.conta)}</td><td>${esc(r.chip)}</td><td class="n">${fmt(r.cliques)}</td><td class="n">${fmt(r.conversas)}</td></tr>`).join('') || '<tr><td colspan="5" class="muted">—</td></tr>';
+  $('hist').innerHTML = [...d.hist].sort((a, b) => (a.dia < b.dia ? 1 : -1)).slice(0, 40).map((r) => `<tr><td>${esc(r.dia)}</td><td>${esc(r.chip)}</td><td class="n">${fmt(r.entradas)}</td><td class="n">${fmt(r.falhas)}</td></tr>`).join('');
+  $('erros').textContent = d.erros && d.erros.length ? 'Avisos: ' + d.erros.join(' · ') : '';
+}
+async function carrega() {
+  try {
+    const r = await fetch('/painel-chips/api', { method: 'POST', cache: 'no-store' });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    desenha(await r.json());
+  } catch (e) { $('hora').innerHTML = '<span class="erro">falha ao atualizar (' + esc(e.message) + ')</span>'; }
+}
+carrega(); setInterval(carrega, 60000);
+</script>
+</body>
+</html>

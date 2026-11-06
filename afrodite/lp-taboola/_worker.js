@@ -6,16 +6,22 @@ async function edge(auth, body) {
 }
 async function sha(t) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return [...new Uint8Array(d)].map((x) => x.toString(16).padStart(2, '0')).join(''); }
 // sorteio de chip: função pública rota_chip() no Supabase (chave publicável, feita para ficar no navegador)
-const SB_REST = 'https://cdtfglylekiyxdmrgbne.supabase.co/rest/v1/rpc/rota_chip';
+const SB_REST = 'https://cdtfglylekiyxdmrgbne.supabase.co/rest/v1/rpc/rota_chip_log';
 const SB_PUB = 'sb_publishable_CVZTk5jPKg5XAQo6QUJeTQ_YxMAUX7h';
 let ultimoChip = '5548999057155';
-async function rotaChip() {
+// conta/BM de origem: ?conta=... no link do anúncio; senão, pelo utm_campaign conhecido
+const CONTAS = { zap_roteador: 'Sócio · TARÔ - ESCALA' };
+async function rotaChip(info) {
   try {
-    const r = await fetch(SB_REST, { method: 'POST', headers: { apikey: SB_PUB, 'content-type': 'application/json' }, body: '{}' });
+    const r = await fetch(SB_REST, { method: 'POST', headers: { apikey: SB_PUB, 'content-type': 'application/json' }, body: JSON.stringify(info || {}) });
     const n = String(await r.json() || '').replace(/\D/g, '');
     if (r.ok && n.length >= 12) ultimoChip = n;
   } catch (e) {}
   return ultimoChip;
+}
+function infoDe(q, via, codigo) {
+  return { p_codigo: codigo || null, p_origem: q.get('origem') || q.get('utm_source') || null, p_conta: q.get('conta') || CONTAS[q.get('utm_campaign')] || null,
+    p_campanha: q.get('utm_campaign') || null, p_item: q.get('utm_content') || q.get('ad_id') || null, p_via: via };
 }
 function pedeLogin() {
   return new Response('Login necessário.', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Painel Taro", charset="UTF-8"', 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
@@ -31,18 +37,33 @@ export default {
       const q = url.searchParams;
       const body = JSON.stringify({ codigo: cod, origem: q.get('origem') || 'meta', clid: q.get('fbclid'), campanha: q.get('utm_campaign'), item: q.get('utm_content') || q.get('ad_id'), site: q.get('utm_source') || 'meta', plataforma: q.get('utm_medium') });
       ctx.waitUntil(fetch('https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/tb-click', { method: 'POST', headers: { 'content-type': 'text/plain' }, body }).catch(() => {}));
-      const num = await rotaChip();
+      const num = await rotaChip(infoDe(q, 'zap', cod));
       const msg = 'Olá! Quero minha leitura de tarô 🔮 #' + cod;
       return new Response(null, { status: 302, headers: { location: 'https://wa.me/' + num + '?text=' + encodeURIComponent(msg), 'cache-control': 'no-store' } });
     }
     // (06/11) /w?text=... → sorteia um chip no ar (Painel de Chips) e abre o WhatsApp dele. Chip caiu = sai do sorteio sozinho.
     if (url.pathname === '/w' || url.pathname === '/w/') {
-      const num = await rotaChip();
+      const txt = url.searchParams.get('text') || '';
+      const num = await rotaChip(infoDe(url.searchParams, 'lp', (txt.match(/#([A-Z0-9]{3,8})/) || [])[1]));
       const dest = 'https://wa.me/' + num + (url.searchParams.get('text') ? '?text=' + encodeURIComponent(url.searchParams.get('text')) : '');
       return new Response(null, { status: 302, headers: { location: dest, 'cache-control': 'no-store' } });
     }
     if (url.pathname === '/w/numero') {
-      return new Response(JSON.stringify({ numero: await rotaChip() }), { headers: { 'content-type': 'application/json', 'cache-control': 'no-store', 'access-control-allow-origin': '*' } });
+      return new Response(JSON.stringify({ numero: await rotaChip({ p_via: 'consulta' }) }), { headers: { 'content-type': 'application/json', 'cache-control': 'no-store', 'access-control-allow-origin': '*' } });
+    }
+    // (06/11) Painel de Chips: mesmo login do Painel Tarô; dados vêm da edge chips-dados (que confere o login de novo)
+    if (url.pathname === '/painel-chips' || url.pathname.startsWith('/painel-chips/')) {
+      const a = request.headers.get('authorization') || '';
+      if (!/^Basic /i.test(a)) return pedeLogin();
+      if (url.pathname === '/painel-chips/api') {
+        const r = await fetch('https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/chips-dados', { method: 'POST', headers: { authorization: a } });
+        return new Response(r.body, { status: r.status, headers: { 'content-type': 'application/json', 'cache-control': 'no-store' } });
+      }
+      const ping = await edge(a, { tipo: 'ping' });
+      if (ping.status !== 200) return pedeLogin();
+      const page = await env.ASSETS.fetch(new Request(new URL('/painel-chips/', url), { method: 'GET' }));
+      const h = new Headers(page.headers); h.set('cache-control', 'no-store'); h.set('x-robots-tag', 'noindex'); h.delete('etag');
+      return new Response(page.body, { status: page.status, headers: h });
     }
     if (!url.pathname.startsWith('/painel')) return env.ASSETS.fetch(request);
     const auth = request.headers.get('authorization') || '';
