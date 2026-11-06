@@ -66,8 +66,9 @@ footer a{color:var(--mute)}
 </footer>
 <script>
 (function(){
-  var A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',c='';
-  for(var i=0;i<5;i++)c+=A[Math.floor(Math.random()*A.length)];
+  // (05/11) código com origem: TK + 3 caracteres → o painel separa as vendas do TikTok das da LP da Meta
+  var A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',c='TK';
+  for(var i=0;i<3;i++)c+=A[Math.floor(Math.random()*A.length)];
   var u=new URLSearchParams(location.search);
   var msg='Olá! Quero minha leitura de tarô 🔮 #'+c;
   var link='https://wa.me/554888168343?text='+encodeURIComponent(msg);
@@ -75,7 +76,7 @@ footer a{color:var(--mute)}
   function registra(){
     if(enviado)return; enviado=true;
     try{
-      var body=JSON.stringify({codigo:c,origem:'tiktok',clid:u.get('ttclid'),campanha:u.get('utm_campaign')||u.get('campaign'),item:u.get('utm_content')||u.get('ad'),site:u.get('utm_source')||'tiktok',plataforma:u.get('placement')});
+      var body=JSON.stringify({codigo:c,origem:'tiktok',clid:u.get('ttclid'),campanha:u.get('utm_campaign')||u.get('campaign'),item:u.get('utm_content')||u.get('ad')||u.get('aid'),site:u.get('utm_source')||'tiktok',plataforma:u.get('placement')});
       if(navigator.sendBeacon){navigator.sendBeacon('https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/tb-click',new Blob([body],{type:'text/plain'}));}
       else{fetch('https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/tb-click',{method:'POST',body:body,keepalive:true});}
     }catch(e){}
