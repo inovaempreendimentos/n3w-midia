@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Afrodite Tarot · Falar com a Jacira</title>
+<style>
+  :root { --bg: #1b1320; --fg: #f6eef7; --muted: #c9b8cc; --btn: #25d366; --btnfg: #0b2a17; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: var(--bg); color: var(--fg); font: 17px/1.5 Georgia, "Times New Roman", serif; text-align: center; }
+  main { padding: 32px max(20px, env(safe-area-inset-left)); max-width: 420px; }
+  h1 { font-weight: 400; font-size: 1.7rem; margin: 0 0 8px; }
+  p { color: var(--muted); margin: 0 0 24px; }
+  a.btn { display: inline-block; background: var(--btn); color: var(--btnfg); font: 600 1.05rem/1 system-ui, sans-serif; padding: 16px 28px; border-radius: 999px; text-decoration: none; }
+  small { display: block; margin-top: 18px; color: var(--muted); font-size: .8rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>🔮 Afrodite Tarot</h1>
+  <p>Abrindo o WhatsApp da Jacira para a sua leitura…</p>
+  <a class="btn" data-wa href="/w">Falar com a Jacira no WhatsApp</a>
+  <small>Leitura de tarô para reflexão e autoconhecimento. Para maiores de 18 anos. <a href="/privacidade/" style="color:inherit">Privacidade</a></small>
+</main>
+<script>
+(function(){
+  // (06/11) página-ponte dos anúncios: código #XXXXX (origem meta) + sorteio de chip em /w
+  var A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',c='';
+  for(var i=0;i<5;i++)c+=A[Math.floor(Math.random()*A.length)];
+  var u=new URLSearchParams(location.search);
+  var msg='Olá! Quero minha leitura de tarô 🔮 #'+c;
+  var link='/w?text='+encodeURIComponent(msg);
+  var enviado=false;
+  function registra(){
+    if(enviado)return; enviado=true;
+    try{
+      var body=JSON.stringify({codigo:c,origem:'meta',clid:u.get('fbclid'),campanha:u.get('utm_campaign'),item:u.get('utm_content')||u.get('ad_id'),site:u.get('utm_source')||'meta',plataforma:u.get('utm_medium')});
+      if(navigator.sendBeacon){navigator.sendBeacon('https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/tb-click',new Blob([body],{type:'text/plain'}));}
+      else{fetch('https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/tb-click',{method:'POST',body:body,keepalive:true});}
+    }catch(e){}
+    try{if(window.fbq)fbq('track','Contact');}catch(e){}
+  }
+  document.querySelectorAll('[data-wa]').forEach(function(a){ a.href=link; a.addEventListener('click',registra); });
+  setTimeout(function(){ registra(); location.href=link; }, 900);
+})();
+</script>
+</body>
+</html>

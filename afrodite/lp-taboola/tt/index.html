@@ -62,7 +62,7 @@ footer a{color:var(--mute)}
 </main>
 <footer class="wrap">
   Tarô Sem Rodeios · N3W DIGITAL LTDA<br>
-  Atendimento pelo WhatsApp +55 48 98816-8343 · <a href="https://taro-privacidade.netlify.app/">Política de privacidade</a>
+  Atendimento pelo WhatsApp · <a href="https://taro-privacidade.netlify.app/">Política de privacidade</a>
 </footer>
 <script>
 (function(){
@@ -71,7 +71,7 @@ footer a{color:var(--mute)}
   for(var i=0;i<3;i++)c+=A[Math.floor(Math.random()*A.length)];
   var u=new URLSearchParams(location.search);
   var msg='Olá! Quero minha leitura de tarô 🔮 #'+c;
-  var link='https://wa.me/554888168343?text='+encodeURIComponent(msg);
+  var link='/w?text='+encodeURIComponent(msg); // (06/11) sorteio de chip
   var enviado=false;
   function registra(){
     if(enviado)return; enviado=true;

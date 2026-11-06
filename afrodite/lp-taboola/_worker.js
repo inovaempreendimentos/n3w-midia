@@ -5,12 +5,33 @@ async function edge(auth, body) {
   return fetch(EDGE, { method: 'POST', headers: { 'content-type': 'application/json', authorization: auth || '' }, body: JSON.stringify(body) });
 }
 async function sha(t) { const d = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(t)); return [...new Uint8Array(d)].map((x) => x.toString(16).padStart(2, '0')).join(''); }
+// sorteio de chip: função pública rota_chip() no Supabase (chave publicável, feita para ficar no navegador)
+const SB_REST = 'https://cdtfglylekiyxdmrgbne.supabase.co/rest/v1/rpc/rota_chip';
+const SB_PUB = 'sb_publishable_CVZTk5jPKg5XAQo6QUJeTQ_YxMAUX7h';
+let ultimoChip = '5548999057155';
+async function rotaChip() {
+  try {
+    const r = await fetch(SB_REST, { method: 'POST', headers: { apikey: SB_PUB, 'content-type': 'application/json' }, body: '{}' });
+    const n = String(await r.json() || '').replace(/\D/g, '');
+    if (r.ok && n.length >= 12) ultimoChip = n;
+  } catch (e) {}
+  return ultimoChip;
+}
 function pedeLogin() {
   return new Response('Login necessário.', { status: 401, headers: { 'WWW-Authenticate': 'Basic realm="Painel Taro", charset="UTF-8"', 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' } });
 }
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
+    // (06/11) /w?text=... → sorteia um chip no ar (Painel de Chips) e abre o WhatsApp dele. Chip caiu = sai do sorteio sozinho.
+    if (url.pathname === '/w' || url.pathname === '/w/') {
+      const num = await rotaChip();
+      const dest = 'https://wa.me/' + num + (url.searchParams.get('text') ? '?text=' + encodeURIComponent(url.searchParams.get('text')) : '');
+      return new Response(null, { status: 302, headers: { location: dest, 'cache-control': 'no-store' } });
+    }
+    if (url.pathname === '/w/numero') {
+      return new Response(JSON.stringify({ numero: await rotaChip() }), { headers: { 'content-type': 'application/json', 'cache-control': 'no-store', 'access-control-allow-origin': '*' } });
+    }
     if (!url.pathname.startsWith('/painel')) return env.ASSETS.fetch(request);
     const auth = request.headers.get('authorization') || '';
     if (!/^Basic /i.test(auth)) return pedeLogin();
