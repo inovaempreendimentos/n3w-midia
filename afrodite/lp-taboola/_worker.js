@@ -10,7 +10,7 @@ const SB_REST = 'https://cdtfglylekiyxdmrgbne.supabase.co/rest/v1/rpc/rota_chip_
 const SB_PUB = 'sb_publishable_CVZTk5jPKg5XAQo6QUJeTQ_YxMAUX7h';
 let ultimoChip = '5548999057155';
 // conta/BM de origem: ?conta=... no link do anúncio; senão, pelo utm_campaign conhecido
-const CONTAS = { zap_roteador: 'Sócio · TARÔ - ESCALA' };
+const CONTAS = { zap_roteador: 'Sócio · TARÔ - ESCALA', zap_escala: 'Sócio · TARÔ - ESCALA', zap_leticia: 'Sócio · TARÔ - ESCALA', zap_lp: 'Sócio · TARÔ - ESCALA' };
 async function rotaChip(info) {
   try {
     const r = await fetch(SB_REST, { method: 'POST', headers: { apikey: SB_PUB, 'content-type': 'application/json' }, body: JSON.stringify(info || {}) });
