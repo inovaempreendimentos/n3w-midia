@@ -36,8 +36,10 @@ export default {
       const cod = [...rnd].map((x) => A[x % A.length]).join('');
       const q = url.searchParams;
       const body = JSON.stringify({ codigo: cod, origem: q.get('origem') || 'meta', clid: q.get('fbclid'), campanha: q.get('utm_campaign'), item: q.get('utm_content') || q.get('ad_id'), site: q.get('utm_source') || 'meta', plataforma: q.get('utm_medium') });
-      ctx.waitUntil(fetch('https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/tb-click', { method: 'POST', headers: { 'content-type': 'text/plain' }, body }).catch(() => {}));
-      const num = await rotaChip(infoDe(q, 'zap', cod));
+      if (!/facebookexternalhit|facebot|meta-externalagent|bot|crawler|spider|preview/i.test(request.headers.get('user-agent') || '')) ctx.waitUntil(fetch('https://cdtfglylekiyxdmrgbne.supabase.co/functions/v1/tb-click', { method: 'POST', headers: { 'content-type': 'text/plain' }, body }).catch(() => {}));
+      // robôs da Meta (revisão/preview) não contam como clique
+      const robo = /facebookexternalhit|facebot|meta-externalagent|bot|crawler|spider|preview/i.test(request.headers.get('user-agent') || '');
+      const num = await rotaChip(infoDe(q, robo ? 'robo' : 'zap', cod));
       const msg = 'Olá! Quero minha leitura de tarô 🔮 #' + cod;
       return new Response(null, { status: 302, headers: { location: 'https://wa.me/' + num + '?text=' + encodeURIComponent(msg), 'cache-control': 'no-store' } });
     }

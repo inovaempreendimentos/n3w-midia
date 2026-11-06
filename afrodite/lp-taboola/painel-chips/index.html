@@ -40,6 +40,9 @@
   <header><h1>Painel de Chips</h1><span class="muted" id="hora">carregando…</span></header>
   <p class="muted">Atualiza sozinho a cada 60 s. Verde = recebe tráfego · amarelo = atenção · vermelho = fora do sorteio.</p>
 
+  <h2>Funil de distribuição (hoje): conta/BM → roteador → chip</h2>
+  <div class="card" id="funil"></div>
+
   <h2>Monitor de saúde</h2>
   <div class="grid" id="monitor"></div>
 
@@ -78,7 +81,57 @@ function checagens(c) {
     ['Leitura da Meta', minMeta == null ? 'sem leitura' : 'há ' + Math.round(minMeta) + ' min', minMeta == null || minMeta > 20 ? 'warn' : 'ok'],
   ];
 }
+  // ── funil de distribuição: Conta/BM de anúncio → Roteador → Chip (hoje). Largura das faixas = cliques.
+function desenhaFunil(el, rows, cores) {
+    const NS = 'http://www.w3.org/2000/svg';
+    const mk = (tag, attrs, txt) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); if (txt != null) e.textContent = txt; return e; };
+    const fmt = (n) => Number(n || 0).toLocaleString('pt-BR');
+    const FIXAS = ['Sócio · TARÔ - ESCALA'];
+    const contas = {}; for (const c of FIXAS) contas[c] = 0;
+    const chips = {};
+    for (const r of rows) {
+      if (r.conta) contas[r.conta] = (contas[r.conta] || 0) + r.cliques;
+      const k = r.chip; chips[k] = chips[k] || { nome: k, status: r.chip_status, sorteio: r.no_sorteio, cliques: 0, conversas: 0, vendas: 0 };
+      chips[k].cliques += r.cliques; chips[k].conversas += r.conversas; chips[k].vendas += r.vendas;
+    }
+    const L = Object.entries(contas).map(([nome, v]) => ({ nome, v }));
+    const R = Object.values(chips).sort((a, b) => (b.sorteio - a.sorteio) || (b.cliques - a.cliques));
+    const total = L.reduce((s, x) => s + x.v, 0);
+    const W = Math.max(el.clientWidth || 640, 320), compacto = W < 560;
+    const lh = 64, H = Math.max(L.length, R.length, 2) * lh + 40;
+    const xL = 0, wL = compacto ? 110 : 190, xM = W / 2 - 44, wM = 88, wR = compacto ? 130 : 230, xR = W - wR;
+    const svg = mk('svg', { viewBox: `0 0 ${W} ${H}`, width: '100%', height: H, role: 'img', 'aria-label': 'Funil de distribuição: contas de anúncio, roteador e chips' });
+    const maxV = Math.max(total, 1), escala = (v) => (v ? Math.max(3, 34 * v / maxV) : 1.5);
+    const yN = (i, n) => 20 + (H - 40) * (i + 0.5) / n;
+    const yM = H / 2;
+    const faixa = (x1, y1, x2, y2, w, cor, op) => svg.append(mk('path', { d: `M${x1},${y1} C${(x1 + x2) / 2},${y1} ${(x1 + x2) / 2},${y2} ${x2},${y2}`, stroke: cor, 'stroke-width': w, fill: 'none', opacity: op, 'stroke-linecap': 'round' }));
+    L.forEach((c, i) => faixa(xL + wL, yN(i, L.length), xM, yM, escala(c.v), cores.linha, c.v ? 0.55 : 0.25));
+    R.forEach((c, i) => {
+      const cor = c.status === 'CONNECTED' && c.sorteio ? cores.ok : c.status === 'BANNED' || !c.sorteio ? cores.bad : cores.warn;
+      faixa(xM + wM, yM, xR, yN(i, R.length), escala(c.cliques), cor, c.cliques ? 0.6 : 0.2);
+    });
+    const caixa = (x, y, w, titulo, sub, cor) => {
+      const g = mk('g', {});
+      g.append(mk('rect', { x, y: y - 22, width: w, height: 44, rx: 8, fill: cores.painel, stroke: cor || cores.borda }));
+      g.append(mk('text', { x: x + 10, y: y - 4, fill: cores.texto, 'font-size': 12.5, 'font-weight': 600 }, titulo.length > (compacto ? 16 : 30) ? titulo.slice(0, compacto ? 15 : 29) + '…' : titulo));
+      g.append(mk('text', { x: x + 10, y: y + 13, fill: cores.mudo, 'font-size': 11.5 }, sub));
+      svg.append(g);
+    };
+    L.forEach((c, i) => caixa(xL, yN(i, L.length), wL, c.nome, fmt(c.v) + ' cliques'));
+    caixa(xM, yM, wM, 'Roteador', fmt(total) + ' cliques', cores.linha);
+    R.forEach((c, i) => {
+      const cor = c.status === 'CONNECTED' && c.sorteio ? cores.ok : c.status === 'BANNED' || !c.sorteio ? cores.bad : cores.warn;
+      caixa(xR, yN(i, R.length), wR, c.nome, compacto ? `${fmt(c.cliques)} → ${fmt(c.conversas)} → ${fmt(c.vendas)}` : `${fmt(c.cliques)} cliques → ${fmt(c.conversas)} conversas → ${fmt(c.vendas)} vendas`, cor);
+    });
+    el.replaceChildren(svg);
+    if (!total) { const p = document.createElement('p'); p.style.cssText = 'margin:6px 0 0;font-size:12px;opacity:.75'; p.textContent = 'Nenhum clique de anúncio roteado hoje ainda — as faixas engrossam conforme os cliques chegam.'; el.append(p); }
+  }
+
+let ultimo = null;
 function desenha(d) {
+  ultimo = d;
+  const css = getComputedStyle(document.documentElement), v = (n) => css.getPropertyValue(n).trim();
+  desenhaFunil($('funil'), d.funil || [], { ok: v('--ok'), warn: v('--warn'), bad: v('--bad'), linha: v('--muted'), painel: v('--panel'), borda: v('--line'), texto: v('--fg'), mudo: v('--muted') });
   $('hora').textContent = 'atualizado ' + new Date(d.agora).toLocaleTimeString('pt-BR');
   const ord = { bad: 0, warn: 1, ok: 2 };
   const chips = [...d.chips].sort((a, b) => (b.ativo - a.ativo));
@@ -108,6 +161,7 @@ async function carrega() {
   } catch (e) { $('hora').innerHTML = '<span class="erro">falha ao atualizar (' + esc(e.message) + ')</span>'; }
 }
 carrega(); setInterval(carrega, 60000);
+let rz; addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(() => ultimo && desenha(ultimo), 200); });
 </script>
 </body>
 </html>
