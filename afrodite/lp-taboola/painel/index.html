@@ -396,7 +396,14 @@ function montar(res,real,per,d1,d2,conf){
   }
   // (05/11) LP taro-leitura: clique passa pela página antes do WhatsApp; a conversa chega só com o código "#XXXXX" (sem referral).
   // Essas vendas vêm como ad='lp' e entram no anúncio de maior gasto da campanha "LP taro" (o código não separa Meta de TikTok).
-  const lp=R.get('lp'); if(lp){let alvo=null;for(const a of A.values()){const c=C.get(a.campaign_id);if(c&&/LP\s*taro/i.test(c.name)&&(!alvo||a.m.gasto>alvo.m.gasto))alvo=a;}
+  // (07/11) LP com tb_cliques: o SQL devolve ad='lp¦<utm_campaign>¦<utm_content|ad_id>'. Casa com a campanha pelo nome e com o anúncio pelo nome/id
+  // (entre cópias iguais, o de maior gasto). Sem campanha correspondente, cai na regra antiga ('lp').
+  const nrm=(s)=>{s=String(s==null?'':s).replace(/\+/g,' ').trim(); try{return decodeURIComponent(s).trim();}catch(e){return s;}}; // utm_content chega URL-encoded (espaço = '+')
+  for(const [k,x] of [...R.entries()]){ if(typeof k!=='string'||!k.startsWith('lp¦'))continue; const i1=k.indexOf('¦'), i2=k.indexOf('¦',i1+1); const camp=k.slice(i1+1,i2).trim(), item=k.slice(i2+1).trim();
+    let alvo=null,alvoC=null; for(const a of A.values()){const c=C.get(a.campaign_id); if(!c||nrm(String(c.name).replace(/ · vendas da LP.*$/,''))!==nrm(camp))continue;
+      if(!alvoC||a.m.gasto>alvoC.m.gasto)alvoC=a; if(item&&(nrm(a.name)===nrm(item)||String(a.id)===item)&&(!alvo||a.m.gasto>alvo.m.gasto))alvo=a;}
+    const t=alvo||alvoC; R.delete(k); const dest=t?t.id:'lp'; const y=R.get(dest)||{leads:0,vendas:0,fat:0}; R.set(dest,{leads:y.leads+x.leads,vendas:y.vendas+x.vendas,fat:y.fat+x.fat});}
+  const lp=R.get('lp'); if(lp){let alvo=null;for(const a of A.values()){const c=C.get(a.campaign_id);if(c&&/LP\s*(taro|Astral)/i.test(c.name)&&(!alvo||a.m.gasto>alvo.m.gasto))alvo=a;}
     if(alvo){const y=R.get(alvo.id)||{leads:0,vendas:0,fat:0};R.set(alvo.id,{leads:y.leads+lp.leads,vendas:y.vendas+lp.vendas,fat:y.fat+lp.fat});R.delete('lp');
       const cc=C.get(alvo.campaign_id); if(cc&&!/TikTok juntos/.test(cc.name))cc.name+=' · vendas da LP (Meta + TikTok juntos)';}}
   for(const [id,a] of A){const x=R.get(id); if(x){a.m.leads+=x.leads;a.m.vendas+=x.vendas;a.m.fat+=x.fat;}
