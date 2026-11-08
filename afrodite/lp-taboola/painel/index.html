@@ -169,6 +169,7 @@ dialog::backdrop{background:rgba(10,6,16,.45)}
   </div>
 
   <div class="conf" id="conf" hidden></div>
+  <div class="conf" id="lps" hidden></div>
 
   <div class="tabs" role="tablist">
     <button role="tab" data-t="c" aria-selected="true" id="tab-c">Campanhas<span class="n" id="n-c"></span></button>
@@ -227,7 +228,7 @@ dialog::backdrop{background:rgba(10,6,16,.45)}
     async callTool(server,tool,args){
       if(tool==='consultar'){return {payload:await post({tipo:'meta',caminho:args.caminho,parametros:args.parametros||{},fresh:!!window._fresh})};}
       if(tool==='execute_sql'){const q=String(args.query||'');const ds=[...q.matchAll(/date '(\d{4}-\d{2}-\d{2})'/g)].map(m=>m[1]);
-        const j=await post(/\/\*pulse\*\//.test(q)?{tipo:'pulse'}:{tipo:/mp_n/.test(q)?'conf':'vendas',d1:ds[0],d2:ds[1]||ds[0]});if(j.erro)throw new Error(j.erro);
+        const j=await post(/\/\*pulse\*\//.test(q)?{tipo:'pulse'}:{tipo:/\/\*lps\*\//.test(q)?'lps':(/mp_n/.test(q)?'conf':'vendas'),d1:ds[0],d2:ds[1]||ds[0]});if(j.erro)throw new Error(j.erro);
         return {payload:{result:'<untrusted-data-a1>'+JSON.stringify(j.rows||[])+'</untrusted-data-a1>'}};}
       if(['pausar','ativar','alterar_orcamento','alterar_lance'].includes(tool)){const j=await post({tipo:'acao',tool,args});if(j&&j.erro)throw new Error(j.erro);return {payload:j};}
       throw new Error('Ação não disponível neste link.');
@@ -318,6 +319,14 @@ async function conferencia(d1,d2){
   const o={};for(const k in x)o[k]=k==='mp_ult'?x[k]:+x[k]||0;return o;
 }
 
+async function lpsResumo(d1,d2){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d1)||!/^\d{4}-\d{2}-\d{2}$/.test(d2))throw new Error('data inválida');
+  const q="/*lps*/ "+"with c as (select coalesce(nullif(lp,''),'(sem lp)') lp, coalesce(origem,'meta') origem, wa_id from tb_cliques where (criado_em at time zone 'America/Sao_Paulo')::date between date 'D1' and date 'D2'), v as (select wa_id, count(*) n, sum(valor) fat from tarot_pedidos where status='pago' and valor>0 and coalesce(plano,'')<>'teste' and (coalesce(pago_em,criado_em) at time zone 'America/Sao_Paulo')::date between date 'D1' and date 'D2' group by wa_id), w as (select lp, origem, wa_id from c where wa_id is not null group by 1,2,3) select c.lp, c.origem, count(*)::int cliques, (select count(*) from w where w.lp=c.lp and w.origem=c.origem)::int conversas, (select count(*) from w join v using (wa_id) where w.lp=c.lp and w.origem=c.origem)::int vendas, (select coalesce(sum(v.fat),0) from w join v using (wa_id) where w.lp=c.lp and w.origem=c.origem)::float fat from c group by c.lp, c.origem order by c.lp, c.origem".replace(/D1/g,d1).replace(/D2/g,d2);
+  const r=await mcp.callTool(SB,'execute_sql',{project_id:SB_PROJ,query:q},{cache:refresh?{staleTime:5*60e3,gcTime:30*60e3,refresh:true}:{staleTime:5*60e3,gcTime:30*60e3}});
+  return linhasSupabase({answer:r.payload!==undefined?r.payload:r})||[];
+}
+
+let lpsData=null;
 // ---------- carga por conta
 function filtroConta(acc){const f=[];if(acc.termo)f.push({field:'campaign.name',operator:'CONTAIN',value:acc.termo[st.produto]});return f;}
 function contaNoProduto(acc){return st.produto==='tarot'||!!acc.termo;}
@@ -356,6 +365,7 @@ async function carregar(){
   const accs=ACCS.filter(a=>contaNoProduto(a)&&(!st.conta||st.conta===a.id));
   const pReal=st.produto==='tarot'?vendasReais(d1,d2).catch(e=>({erro:errTxt(e)})):Promise.resolve(new Map());
   const pConf=st.produto==='tarot'?conferencia(d1,d2).catch(e=>({erro:errTxt(e)})):null;
+  const pLps=st.produto==='tarot'?lpsResumo(d1,d2).catch(e=>({erro:errTxt(e)})):null;
   const res=await Promise.all(accs.map(a=>carregaConta(a,per)));
   // se a Meta limitar uma conta (código 17), reaproveita os últimos dados dela neste período
   for(let i=0;i<res.length;i++){const r=res[i],k=r.acc.id+'|'+per;
@@ -363,6 +373,7 @@ async function carregar(){
     else if(/código 17|limitou/.test(r.erro)&&ultimoBom.has(k)){const u=ultimoBom.get(k);res[i]={...u.r,erro:null,aviso:(r.acc.nome||r.acc.label)+': Meta limitou as consultas; mostrando os dados de '+new Date(u.at).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})+'.'};}}
   const real=await pReal;
   const conf=st.produto==='tarot'?await pConf:null;
+  lpsData=st.produto==='tarot'?await pLps:null;
   refresh=false;
   if(seq!==loadSeq)return;
   lastRes=res;
@@ -586,7 +597,19 @@ function desenhaRoas(pts){
   $('rb-sub').textContent=(st.conta?nomeConta(ACCS.find(a=>a.id===st.conta)||{label:''}):'Todas as contas')+' · 14 dias: gasto '+brl(tg)+' · faturamento '+brl(tf)+' · ROAS '+(tg?nf2.format(tf/tg):'—')+' · '+dv.filter(p=>p.roas>=1).length+' dias no verde, '+dv.filter(p=>p.roas<1).length+' no vermelho';
 }
 
+function renderLps(){
+  const box=$('lps'); if(!box)return; const L=lpsData;
+  if(st.produto!=='tarot'||!L||L.erro||!L.length){box.hidden=true;return;}
+  box.hidden=false; box.replaceChildren();
+  const t=el('span'); t.append(el('b',{text:'LPs (teste A/B/C):'}),' cliques → conversas → vendas'); box.append(t);
+  const rows=[...L].sort((a,b)=>(+b.cliques)-(+a.cliques));
+  for(const x of rows){const cl=+x.cliques||0,cv=+x.conversas||0,vd=+x.vendas||0,ft=+x.fat||0;const s=el('span');
+    s.append(el('b',{text:String(x.lp)+' · '+String(x.origem)+': '}),int(cl)+' cliques · '+int(cv)+' conversas'+(cl?' ('+Math.round(100*cv/cl)+'%)':'')+' · '+int(vd)+' vendas · '+brl(ft)+(cl?' · '+brl(ft/cl)+'/clique':''));
+    box.append(s);}
+}
+
 function renderConf(){
+  renderLps();
   const box=$('conf'); const c=data&&data.conf;
   if(st.produto!=='tarot'||!c){box.hidden=true;return;}
   box.hidden=false; box.replaceChildren();
